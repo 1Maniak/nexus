@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -31,6 +32,8 @@ const (
 	colorReset = "\033[0m"
 	colorRed   = "\033[31m"
 	colorGray  = "\033[90m"
+	colorGreen = "\033[32m"
+	colorCyan  = "\033[36m"
 )
 
 func printSystem(msg string) {
@@ -40,6 +43,17 @@ func printSystem(msg string) {
 func printError(msg string) {
 	fmt.Println(string(colorRed) + msg + string(colorReset))
 }
+
+func printAction(msg string) {
+	fmt.Println(string(colorCyan) + "[ACTION] " + msg + string(colorReset))
+}
+
+func printSuccess(msg string) {
+	fmt.Println(string(colorGreen) + "[OK] " + msg + string(colorReset))
+}
+
+// --- Глобальные переменные ---
+var lastFilePath string
 
 // --- Эмбеддинги через Ollama ---
 func getEmbedding(text string) ([]float64, error) {
@@ -632,7 +646,7 @@ func webSearch(query string) (string, error) {
 }
 
 // --- Извлечение числа из текста (для курсов, цен и т.п.) ---
-func extractNumber(text string) string {
+func extractNumberImproved(text string) string {
 	re := regexp.MustCompile(`\d+[.,]\d+`)
 	matches := re.FindAllString(text, -1)
 	for _, m := range matches {
@@ -664,6 +678,117 @@ func splitIntoChunks(text string, chunkSize int) []string {
 		chunks = append(chunks, string(runes[i:end]))
 	}
 	return chunks
+}
+
+// --- Агентные инструменты ---
+func isSafeToWrite(path string) bool {
+	safeExts := map[string]bool{
+		".txt": true, ".md": true, ".go": true, ".json": true,
+		".yaml": true, ".toml": true, ".csv": true, ".html": true,
+		".css": true, ".js": true, ".py": true, ".xml": true,
+	}
+	ext := strings.ToLower(filepath.Ext(path))
+	return safeExts[ext]
+}
+
+func executeAction(action string, params map[string]interface{}) (string, error) {
+	switch action {
+	case "read_file":
+		path, ok := params["path"].(string)
+		if !ok || path == "" {
+			return "", fmt.Errorf("путь не указан")
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+		lastFilePath = path
+		return string(data), nil
+
+	case "write_file":
+		path, ok := params["path"].(string)
+		if !ok || path == "" {
+			return "", fmt.Errorf("путь не указан")
+		}
+		if !isSafeToWrite(path) {
+			return "", fmt.Errorf("запись в файлы с таким расширением запрещена для безопасности")
+		}
+		content, ok := params["content"].(string)
+		if !ok {
+			return "", fmt.Errorf("содержимое не указано")
+		}
+		err := os.WriteFile(path, []byte(content), 0644)
+		if err != nil {
+			return "", err
+		}
+		lastFilePath = path
+		return "Файл перезаписан", nil
+
+	case "append_file":
+		path, ok := params["path"].(string)
+		if !ok || path == "" {
+			return "", fmt.Errorf("путь не указан")
+		}
+		if !isSafeToWrite(path) {
+			return "", fmt.Errorf("запись в файлы с таким расширением запрещена для безопасности")
+		}
+		content, ok := params["content"].(string)
+		if !ok {
+			return "", fmt.Errorf("содержимое не указано")
+		}
+		f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return "", err
+		}
+		defer f.Close()
+		if _, err := f.WriteString(content); err != nil {
+			return "", err
+		}
+		lastFilePath = path
+		return "Текст добавлен в конец файла", nil
+
+	case "open_file":
+		path, ok := params["path"].(string)
+		if !ok || path == "" {
+			return "", fmt.Errorf("путь не указан. Пожалуйста, укажите путь к файлу или папке.")
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			return "", fmt.Errorf("файл или папка не найдены: %v", err)
+		}
+		if info.IsDir() {
+			cmd := exec.Command("explorer", path)
+			if err := cmd.Start(); err != nil {
+				return "", fmt.Errorf("ошибка открытия папки: %v", err)
+			}
+			lastFilePath = path
+			return "Папка открыта в проводнике", nil
+		} else {
+			cmd := exec.Command("cmd", "/c", "start", "", path)
+			if err := cmd.Run(); err != nil {
+				return "", fmt.Errorf("ошибка открытия файла: %v", err)
+			}
+			lastFilePath = path
+			ext := strings.ToLower(filepath.Ext(path))
+			if ext == ".exe" || ext == ".bat" || ext == ".cmd" || ext == ".msi" {
+				return "Программа запущена", nil
+			}
+			return "Файл открыт в стандартном приложении", nil
+		}
+
+	case "search_web":
+		query, ok := params["query"].(string)
+		if !ok || query == "" {
+			return "", fmt.Errorf("запрос не указан")
+		}
+		return webSearch(query)
+
+	case "get_time":
+		return getCurrentTime(), nil
+
+	default:
+		return "", fmt.Errorf("неизвестное действие: %s", action)
+	}
 }
 
 // --- Основной клиент ---
@@ -701,27 +826,52 @@ func main() {
 	url := "http://localhost:8080/v1/chat/completions"
 	scanner := bufio.NewScanner(os.Stdin)
 
-	systemContent := `Ты – Nexus. Твой создатель – Максим. "Nexus" создал - Максим. Ты помогаешь Максиму проектировать системы, писать код, анализировать идеи и принимать решения. Ты отвечаешь только на русском языке, чётко, структурно и с уважением.
-	Важно: Ты умеешь искать информацию в интернете, если тебя попросят. Также у тебя есть доступ к долговременной памяти, где хранятся предыдущие диалоги. Если тебя спросят о чём-то, что ты уже обсуждал, ты можешь вспомнить это.
-	Если ты не знаешь ответа или не уверен, скажи "я не знаю" или "информация не найдена". Не выдумывай факты.
+	systemContent := `Ты — Nexus, AI-агент Максима. Ты помогаешь ему с проектированием, кодом, анализом идей. Ты отвечаешь на русском языке.
 
-	Пример диалога:
-	Максим: Привет, кто ты?
-	Nexus: Привет! Я Nexus, помощник Максима.
+Ты умеешь делать следующее:
+- Читать файлы (read_file)
+- Перезаписывать файлы (write_file)
+- Добавлять текст в конец файла (append_file)
+- Открывать файлы и папки (open_file)
+- Искать в интернете (search_web)
+- Показывать текущее время (get_time)
 
-	Максим: А кто я?
-	Nexus: Ты – Максим, мой создатель.
+Если пользователь спрашивает о твоих способностях — отвечай честно, не отрицай свои возможности. Если запрос требует действия, ты возвращаешь JSON с полем "action" и "params". Если это обычный диалог, возвращаешь JSON с полем "message".
 
-	Максим: Что я говорил до этого?
-	Nexus: Ты спросил, кто я, а потом представился как Максим.
+Доступные действия:
+- read_file: прочитать файл. Параметр: "path" — путь к файлу.
+- write_file: перезаписать файл. Параметр: "path" и "content".
+- append_file: добавить текст в конец файла. Параметр: "path" и "content".
+- open_file: открыть файл или папку. Параметр: "path" — полный путь.
+- search_web: поиск в интернете. Параметр: "query" — что искать.
+- get_time: показать текущее время (без параметров).
 
-	Теперь отвечай так же.`
+Примеры:
+Запрос: "Прочитай файл Create.txt"
+Ответ: {"action": "read_file", "params": {"path": "Create.txt"}}
+
+Запрос: "Перезапиши файл test.txt новым текстом"
+Ответ: {"action": "write_file", "params": {"path": "test.txt", "content": "новый текст"}}
+
+Запрос: "Добавь в файл test.txt ещё строку"
+Ответ: {"action": "append_file", "params": {"path": "test.txt", "content": "ещё строка"}}
+
+Запрос: "Открой папку C:\Users"
+Ответ: {"action": "open_file", "params": {"path": "C:\\Users"}}
+
+Запрос: "Открой файл C:\Users\maksi\AI\test.txt"
+Ответ: {"action": "open_file", "params": {"path": "C:\\Users\\maksi\\AI\\test.txt"}}
+
+Запрос: "Который час?"
+Ответ: {"action": "get_time", "params": {}}
+
+Запрос: "Привет, как дела?"
+Ответ: {"message": "Привет! У меня всё хорошо, чем могу помочь?"}
+
+Ты должен отвечать ТОЛЬКО в формате JSON. Без лишнего текста.`
 
 	messages := []map[string]string{
-		{
-			"role":    "system",
-			"content": systemContent,
-		},
+		{"role": "system", "content": systemContent},
 	}
 
 	printSystem("Nexus готов к общению. Напиши 'exit' для выхода.")
@@ -737,203 +887,190 @@ func main() {
 			break
 		}
 
-		handled := false
-		searchQuery := ""
-		lower := strings.ToLower(userInput)
-
-		// --- Обработка запроса времени ---
-		if strings.Contains(lower, "время") || strings.Contains(lower, "часы") || strings.Contains(lower, "сколько времени") {
-			currentTime := getCurrentTime()
-			fmt.Println("Nexus: Сейчас", currentTime)
-			messages = append(messages, map[string]string{
-				"role":    "system",
-				"content": "Текущее время: " + currentTime,
-			})
-			handled = true
+		// --- Команда !последний (открыть последний файл/папку) ---
+		if strings.HasPrefix(userInput, "!последний") {
+			if lastFilePath == "" {
+				fmt.Println("Nexus: Нет последнего открытого файла или папки.")
+				continue
+			}
+			printAction("Открытие последнего файла/папки: " + lastFilePath)
+			params := map[string]interface{}{"path": lastFilePath}
+			result, err := executeAction("open_file", params)
+			if err != nil {
+				printError("Ошибка: " + err.Error())
+				continue
+			}
+			printSuccess("Готово")
+			fmt.Println("Nexus: " + result)
 			continue
 		}
 
-		// --- Обработка явной команды поиска ---
+		// ----- СТАРЫЕ КОМАНДЫ (совместимость) -----
 		if strings.HasPrefix(userInput, "!поиск") {
-			searchQuery = strings.TrimPrefix(userInput, "!поиск")
-			searchQuery = strings.TrimSpace(searchQuery)
-		} else if strings.HasPrefix(userInput, "найди") {
-			searchQuery = strings.TrimPrefix(userInput, "найди")
-			searchQuery = strings.TrimSpace(searchQuery)
-		} else {
-			// Автоматическое определение поиска
-			keywords := []string{"погода", "температура", "курс", "доллар", "евро", "юань", "рубль", "биткоин", "новости", "актуальный", "последний", "свежий", "в интернете", "найди", "поищи", "узнай"}
-			for _, kw := range keywords {
-				if strings.Contains(lower, kw) {
-					searchQuery = userInput
-					break
-				}
+			query := strings.TrimPrefix(userInput, "!поиск")
+			query = strings.TrimSpace(query)
+			if query == "" {
+				fmt.Println("Nexus: Введите, что искать.")
+				continue
 			}
+			printAction("Поиск в интернете (команда): " + query)
+			result, err := webSearch(query)
+			if err != nil {
+				printError("Ошибка поиска: " + err.Error())
+				continue
+			}
+			number := extractNumberImproved(result)
+			if number != "" {
+				fmt.Println("Nexus: Найдено число (возможно, курс): " + number)
+			}
+			fmt.Println("Nexus: " + result)
+			continue
 		}
 
-		if searchQuery != "" {
-			if strings.HasPrefix(userInput, "!поиск") || strings.HasPrefix(userInput, "найди") {
-				searchQuery = strings.TrimSpace(searchQuery)
-				if searchQuery == "" {
-					fmt.Println("Nexus: Введите, что искать.")
-					handled = true
-					continue
-				}
+		// ----- АГЕНТНЫЙ ЦИКЛ (с повторными попытками при ошибке JSON) -----
+		var agentResp struct {
+			Action  string                 `json:"action"`
+			Params  map[string]interface{} `json:"params"`
+			Message string                 `json:"message"`
+		}
+		var content string
+		success := false
+
+		for attempt := 0; attempt < 2; attempt++ {
+			messages = append(messages, map[string]string{
+				"role":    "user",
+				"content": userInput,
+			})
+
+			payload := map[string]interface{}{
+				"model":          "qwen2.5-3b-instruct-q4_k_m.gguf",
+				"messages":       messages,
+				"stream":         false,
+				"temperature":    0.2,
+				"top_p":          0.9,
+				"repeat_penalty": 1.1,
 			}
-			if !handled && searchQuery != "" {
-				fmt.Print("Nexus ищет в интернете...\n")
-				result, err := webSearch(searchQuery)
-				if err != nil {
-					printError("Ошибка поиска: " + err.Error())
-					handled = true
-					continue
-				}
-				fmt.Println("Готово!")
+			jsonData, err := json.Marshal(payload)
+			if err != nil {
+				printError("Ошибка маршалинга: " + err.Error())
+				break
+			}
 
-				number := extractNumber(result)
-				contextMsg := "Ты получил результаты поиска по запросу. Используй только эту информацию для ответа. Если точных данных нет, скажи, что не знаешь. Не выдумывай цифры.\n\nРезультаты поиска:\n" + result
-				if number != "" {
-					contextMsg += "\n\nВ тексте найдено число (возможно, курс): " + number + ". Используй его, если оно соответствует вопросу."
-				}
-				messages = append(messages, map[string]string{
-					"role":    "system",
-					"content": contextMsg,
-				})
-				messages = append(messages, map[string]string{
-					"role":    "user",
-					"content": userInput,
-				})
+			resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+			if err != nil {
+				printError("Ошибка отправки запроса: " + err.Error())
+				break
+			}
+			var responseData map[string]interface{}
+			if err := json.NewDecoder(resp.Body).Decode(&responseData); err != nil {
+				printError("Ошибка чтения ответа: " + err.Error())
+				resp.Body.Close()
+				break
+			}
+			resp.Body.Close()
 
-				payload := map[string]interface{}{
-					"model":          "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf",
-					"messages":       messages,
-					"stream":         true,
-					"temperature":    0.7,
-					"top_p":          0.9,
-					"repeat_penalty": 1.1,
-				}
-				jsonData, _ := json.Marshal(payload)
+			choices, ok := responseData["choices"].([]interface{})
+			if !ok || len(choices) == 0 {
+				printError("Нет ответа от модели")
+				break
+			}
+			msg, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{})
+			if !ok {
+				printError("Неверный формат ответа")
+				break
+			}
+			content, ok = msg["content"].(string)
+			if !ok {
+				printError("Нет содержимого в ответе")
+				break
+			}
+			content = strings.TrimSpace(content)
 
-				resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-				if err != nil {
-					printError("Ошибка отправки запроса: " + err.Error())
-					handled = true
-					continue
-				}
-				reader := bufio.NewReader(resp.Body)
-				fmt.Print("Nexus: ")
-				fullResponse := ""
-				for {
-					line, err := reader.ReadString('\n')
-					if err != nil {
-						break
-					}
-					if !bytes.HasPrefix([]byte(line), []byte("data: ")) {
-						continue
-					}
-					data := bytes.TrimSpace([]byte(line[5:]))
-					if bytes.Equal(data, []byte("[DONE]")) {
-						break
-					}
-					var chunk map[string]interface{}
-					json.Unmarshal(data, &chunk)
-					if choices, ok := chunk["choices"].([]interface{}); ok && len(choices) > 0 {
-						if delta, ok := choices[0].(map[string]interface{})["delta"].(map[string]interface{}); ok {
-							if content, ok := delta["content"].(string); ok {
-								fmt.Print(content)
-								fullResponse += content
-							}
+			err = json.Unmarshal([]byte(content), &agentResp)
+			if err != nil {
+				if attempt == 0 {
+					re := regexp.MustCompile(`\{[^}]*\}`)
+					matches := re.FindAllString(content, -1)
+					if len(matches) > 0 {
+						jsonCandidate := matches[0]
+						err = json.Unmarshal([]byte(jsonCandidate), &agentResp)
+						if err == nil {
+							success = true
+							break
 						}
 					}
+					fmt.Println("Nexus: " + content)
+					messages = append(messages, map[string]string{
+						"role":    "assistant",
+						"content": content,
+					})
+					_ = addToMemory("Пользователь: "+userInput, "dialog")
+					_ = addToMemory("Nexus: "+content, "dialog")
+					break
+				} else {
+					printError("Ошибка парсинга JSON (попытка 2): " + err.Error())
+					break
 				}
-				fmt.Println()
-				resp.Body.Close()
-
-				messages = append(messages, map[string]string{
-					"role":    "assistant",
-					"content": fullResponse,
-				})
-				_ = addToMemory("Пользователь: "+userInput, "dialog")
-				_ = addToMemory("Nexus: "+fullResponse, "dialog")
-				handled = true
-				continue
+			} else {
+				success = true
+				break
 			}
 		}
 
-		if handled {
-			continue
-		}
-
-		// --- Обычный диалог с RAG ---
-		memories, err := searchMemory(userInput, 7)
-		if err == nil && len(memories) > 0 {
-			context := "Вот что ты говорил ранее (это может быть полезно):\n"
-			for i, mem := range memories {
-				context += fmt.Sprintf("%d. %s\n", i+1, mem)
-			}
+		if !success && content != "" {
+			fmt.Println("Nexus: " + content)
 			messages = append(messages, map[string]string{
-				"role":    "system",
-				"content": context,
+				"role":    "assistant",
+				"content": content,
 			})
-		}
-
-		messages = append(messages, map[string]string{
-			"role":    "user",
-			"content": userInput,
-		})
-
-		payload := map[string]interface{}{
-			"model":          "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf",
-			"messages":       messages,
-			"stream":         true,
-			"temperature":    0.7,
-			"top_p":          0.9,
-			"repeat_penalty": 1.1,
-		}
-		jsonData, _ := json.Marshal(payload)
-
-		resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-		if err != nil {
-			printError("Ошибка отправки запроса: " + err.Error())
+			_ = addToMemory("Пользователь: "+userInput, "dialog")
+			_ = addToMemory("Nexus: "+content, "dialog")
 			continue
 		}
 
-		reader := bufio.NewReader(resp.Body)
-		fmt.Print("Nexus: ")
-		fullResponse := ""
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				break
-			}
-			if !bytes.HasPrefix([]byte(line), []byte("data: ")) {
+		if agentResp.Message != "" {
+			fmt.Println("Nexus: " + agentResp.Message)
+			messages = append(messages, map[string]string{
+				"role":    "assistant",
+				"content": agentResp.Message,
+			})
+			_ = addToMemory("Пользователь: "+userInput, "dialog")
+			_ = addToMemory("Nexus: "+agentResp.Message, "dialog")
+			continue
+		}
+
+		if agentResp.Action == "" {
+			fmt.Println("Nexus: Я не понял, что нужно сделать.")
+			continue
+		}
+
+		printAction("Выполняется: " + agentResp.Action)
+
+		if agentResp.Action == "write_file" || agentResp.Action == "append_file" {
+			path, ok := agentResp.Params["path"].(string)
+			if ok && !isSafeToWrite(path) {
+				fmt.Println("Nexus: Запись в файлы с таким расширением запрещена для безопасности.")
 				continue
 			}
-			data := bytes.TrimSpace([]byte(line[5:]))
-			if bytes.Equal(data, []byte("[DONE]")) {
-				break
-			}
-			var chunk map[string]interface{}
-			json.Unmarshal(data, &chunk)
-			if choices, ok := chunk["choices"].([]interface{}); ok && len(choices) > 0 {
-				if delta, ok := choices[0].(map[string]interface{})["delta"].(map[string]interface{}); ok {
-					if content, ok := delta["content"].(string); ok {
-						fmt.Print(content)
-						fullResponse += content
-					}
-				}
-			}
 		}
-		fmt.Println()
-		resp.Body.Close()
+
+		result, err := executeAction(agentResp.Action, agentResp.Params)
+		if err != nil {
+			printError("Ошибка выполнения: " + err.Error())
+			continue
+		}
+
+		printSuccess("Готово")
+		fmt.Println("Nexus: " + result)
 
 		messages = append(messages, map[string]string{
 			"role":    "assistant",
-			"content": fullResponse,
+			"content": result,
 		})
 
+		_ = addToMemory("Действие: "+agentResp.Action+" -> "+result, "knowledge")
 		_ = addToMemory("Пользователь: "+userInput, "dialog")
-		_ = addToMemory("Nexus: "+fullResponse, "dialog")
+		_ = addToMemory("Nexus: "+result, "dialog")
 	}
 
 	if err := scanner.Err(); err != nil {
