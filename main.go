@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,9 +34,9 @@ const (
 	colorGray  = "\033[90m"
 
 	llmModel           = "qwen2.5-3b-instruct-q4_k_m.gguf"
-	maxHistoryMessages = 12
+	maxHistoryMessages = 20
 	maxRAGResults      = 3
-	maxGeneratedTokens = 400
+	maxGeneratedTokens = 2048
 )
 
 func printSystem(msg string) {
@@ -232,6 +233,82 @@ func blobToVector(blob []byte) ([]float64, error) {
 	return vec, nil
 }
 
+// cosineSimilarity вычисляет косинусное сходство между двумя векторами.
+func cosineSimilarity(a, b []float64) float64 {
+	if len(a) == 0 || len(b) == 0 || len(a) != len(b) {
+		return 0.0
+	}
+	var dotProduct, normA, normB float64
+	for i := range a {
+		dotProduct += a[i] * b[i]
+		normA += a[i] * a[i]
+		normB += b[i] * b[i]
+	}
+	if normA == 0 || normB == 0 {
+		return 0.0
+	}
+	return dotProduct / (float64(normA) * float64(normB))
+}
+
+// Использует косинусное сходство между вектором запроса и векторами в памяти.
+func searchByVector(db *sql.DB, query string, topN int) ([]string, error) {
+	// 1. Получаем эмбеддинг запроса
+	queryVec, err := getEmbedding(query)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения эмбеддинга запроса: %w", err)
+	}
+
+	// 2. Выбираем все записи из памяти
+	rows, err := db.Query("SELECT text, vector FROM memory")
+	if err != nil {
+		return nil, fmt.Errorf("ошибка запроса к БД: %w", err)
+	}
+	defer rows.Close()
+
+	type scoredText struct {
+		text  string
+		score float64
+	}
+	var results []scoredText
+
+	for rows.Next() {
+		var text string
+		var vectorBlob []byte
+		if err := rows.Scan(&text, &vectorBlob); err != nil {
+			continue // пропускаем ошибочные строки
+		}
+		if len(vectorBlob) == 0 {
+			continue // нет вектора — пропускаем
+		}
+		vec, err := blobToVector(vectorBlob)
+		if err != nil {
+			continue // не удалось преобразовать — пропускаем
+		}
+		score := cosineSimilarity(queryVec, vec)
+		results = append(results, scoredText{text: text, score: score})
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка итерации: %w", err)
+	}
+
+	// Сортируем по убыванию сходства
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].score > results[j].score
+	})
+
+	// Берём topN
+	if len(results) > topN {
+		results = results[:topN]
+	}
+
+	// Извлекаем только тексты
+	out := make([]string, len(results))
+	for i, r := range results {
+		out[i] = r.text
+	}
+	return out, nil
+}
+
 // --- Функции памяти (используют SQLite) ---
 func loadMemory() error {
 	return nil
@@ -269,7 +346,7 @@ func removeChunkByID(id string) {
 }
 
 func searchMemory(query string, topN int) ([]string, error) {
-	return searchMemorySQLite(db, query, topN)
+	return searchByVector(db, query, topN)
 }
 
 // --- База знаний с инкрементальным обновлением ---
@@ -688,8 +765,8 @@ func buildChatPayload(messages []map[string]string) map[string]interface{} {
 		"model":             llmModel,
 		"messages":          messages,
 		"stream":            true,
-		"temperature":       0.35,
-		"top_p":             0.85,
+		"temperature":       0.5,
+		"top_p":             0.50,
 		"repeat_penalty":    1.25,
 		"frequency_penalty": 0.35,
 		"presence_penalty":  0.2,
@@ -825,17 +902,31 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	systemContent := `Ты — Nexus, локальный AI-помощник Максима.
-Максим — твой создатель и единственный собеседник. Всегда обращайся к нему на «ты».
+Максим — твой создатель и единственный собеседник. Ты можешь обращаться к нему как на "ТЫ", так и "ВЫ".
+Ты — помощник, который отвечает исключительно на русском языке. Никогда не используй другие языки, даже если в вопросе есть иноязычные слова
 
 Правила ответов:
 - Отвечай ТОЛЬКО на русском языке. Никогда не используй английский, китайский или другие языки.
-- Будь кратким: 1–3 предложения, если не просят подробнее.
+- Пиши исключительно на русском языке.
+- Предлагай свою помощь, только если тебя попросят!
+- Будь кратким: 1–2 предложения, если не просят подробнее.
 - Если не знаешь — скажи «я не знаю». Не выдумывай.
+- Не расписывай что то слишком много если тебя об этом не просили.
+- Ты можешь спросить что бы что то уточнить.
+- Если пользователь спрашивает о курсах валют, погоде, новостях или актуальных данных — всегда используй интернет-поиск.
+- Если ты не уверен, что знаешь актуальное значение, скажи: «Я поищу в интернете» и выполни поиск.
+
+Какие инструменты у тебя есть:
+- Твоя база данных на SQLite в которой у тебя хранятся все диалоги и файлы из базы знаний, к которым ты можешь обращаться при необходимости.
+- Поиск в интернете.
+- Доступ к файловой системе, ты умеешь открывать, записывать, перезаписывать файлы, а также умеешь открывать папки.
+- База знаний из которых ты можешь брать информацию и важный документ Nexus.txt
 
 Факты, которые ты всегда помнишь:
 - Ты — Nexus.
 - Максим — твой создатель.
-- Ты помогаешь с кодом, идеями и проектами.
+- Ты помогаешь с кодом, программированием, идеями и проектами. 
+- Ты написан на языке Go
 
 Примеры:
 Максим: Привет
@@ -991,7 +1082,13 @@ Nexus: Я Nexus — твой локальный AI-помощник.`
 			searchQuery = strings.TrimSpace(searchQuery)
 		} else {
 			// Автоматическое определение поиска (только фактические запросы)
-			keywords := []string{"погода", "температура", "курс", "доллар", "евро", "юань", "рубль", "биткоин", "новости", "в интернете"}
+			keywords := []string{
+				"погода", "температура",
+				"курс", "доллар", "евро", "юань", "рубль", "биткоин",
+				"валюта", "американская", "европейская", "китайская",
+				"сколько стоит", "цена", "котировка",
+				"новости", "в интернете",
+			}
 			for _, kw := range keywords {
 				if strings.Contains(lower, kw) {
 					searchQuery = userInput
