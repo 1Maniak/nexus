@@ -1,0 +1,51 @@
+name: Notify about new release
+
+on:
+  create:
+    tags:
+      - 'v*'  # Запускать при создании любого тега, начинающегося с 'v'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get latest changelog entry
+        id: changelog
+        run: |
+          awk '/^## \[v/{if (p) exit; p=1; next} p' CHANGELOG.md > latest_changelog.txt
+          echo "content=$(cat latest_changelog.txt)" >> $GITHUB_OUTPUT
+
+      - name: Send Telegram Notification
+        uses: cbrgm/telegram-github-action@v1
+        with:
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          message: |
+            🚀 **New Nexus Release!**
+            
+            **Tag:** ${{ github.ref_name }}
+            
+            📝 **Changelog:**
+            ${{ steps.changelog.outputs.content }}
+            
+            👤 **Author:** ${{ github.actor }}
+            🔗 **Repository:** ${{ github.repository }}
+
+      - name: Send VK Notification
+        uses: z3nnik/vk-workflow-notifications@v1
+        with:
+          access_token: ${{ secrets.VK_ACCESS_TOKEN }}
+          peer_ids: ${{ secrets.VK_PEER_ID }}
+          text: |
+            🚀 Новый релиз Nexus!
+            
+            Тег: ${{ github.ref_name }}
+            
+            Что нового:
+            ${{ steps.changelog.outputs.content }}
+            
+            Автор: ${{ github.actor }}
+            Репозиторий: ${{ github.repository }}
