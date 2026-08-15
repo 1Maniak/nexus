@@ -3,7 +3,7 @@ name: Notify about new release
 on:
   create:
     tags:
-      - 'v*'  # Запускать при создании любого тега, начинающегося с 'v'
+      - 'v*'
 
 jobs:
   notify:
@@ -12,40 +12,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get latest changelog entry
-        id: changelog
+      - name: Extract latest changelog
         run: |
           awk '/^## \[v/{if (p) exit; p=1; next} p' CHANGELOG.md > latest_changelog.txt
-          echo "content=$(cat latest_changelog.txt)" >> $GITHUB_OUTPUT
 
-      - name: Send Telegram Notification
-        uses: cbrgm/telegram-github-action@v1
-        with:
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          message: |
-            🚀 **New Nexus Release!**
-            
-            **Tag:** ${{ github.ref_name }}
-            
-            📝 **Changelog:**
-            ${{ steps.changelog.outputs.content }}
-            
-            👤 **Author:** ${{ github.actor }}
-            🔗 **Repository:** ${{ github.repository }}
+      - name: Send to Telegram
+        run: |
+          CHANGELOG=$(cat latest_changelog.txt)
+          MESSAGE=$(printf "Новый релиз Nexus!\n\nТег: %s\n\nЧто нового:\n%s\n\nАвтор: %s\nРепозиторий: %s" "${{ github.ref_name }}" "$CHANGELOG" "${{ github.actor }}" "${{ github.repository }}")
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode "text=$MESSAGE"
 
-      - name: Send VK Notification
-        uses: z3nnik/vk-workflow-notifications@v1
-        with:
-          access_token: ${{ secrets.VK_ACCESS_TOKEN }}
-          peer_ids: ${{ secrets.VK_PEER_ID }}
-          text: |
-            🚀 Новый релиз Nexus!
-            
-            Тег: ${{ github.ref_name }}
-            
-            Что нового:
-            ${{ steps.changelog.outputs.content }}
-            
-            Автор: ${{ github.actor }}
-            Репозиторий: ${{ github.repository }}
+      - name: Send to VK wall
+        run: |
+          CHANGELOG=$(cat latest_changelog.txt)
+          MESSAGE=$(printf "Новый релиз Nexus!\n\nТег: %s\n\nЧто нового:\n%s\n\nАвтор: %s\nРепозиторий: %s" "${{ github.ref_name }}" "$CHANGELOG" "${{ github.actor }}" "${{ github.repository }}")
+          curl -s -X POST "https://api.vk.com/method/wall.post" \
+            -d access_token="${{ secrets.VK_ACCESS_TOKEN }}" \
+            -d owner_id="${{ secrets.VK_GROUP_ID }}" \
+            --data-urlencode "message=$MESSAGE" \
+            -d v=5.131
