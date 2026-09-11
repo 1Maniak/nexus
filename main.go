@@ -252,13 +252,11 @@ func cosineSimilarity(a, b []float64) float64 {
 
 // Использует косинусное сходство между вектором запроса и векторами в памяти.
 func searchByVector(db *sql.DB, query string, topN int) ([]string, error) {
-	// 1. Получаем эмбеддинг запроса
 	queryVec, err := getEmbedding(query)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка получения эмбеддинга запроса: %w", err)
 	}
 
-	// 2. Выбираем все записи из памяти
 	rows, err := db.Query("SELECT text, vector FROM memory")
 	if err != nil {
 		return nil, fmt.Errorf("ошибка запроса к БД: %w", err)
@@ -275,14 +273,14 @@ func searchByVector(db *sql.DB, query string, topN int) ([]string, error) {
 		var text string
 		var vectorBlob []byte
 		if err := rows.Scan(&text, &vectorBlob); err != nil {
-			continue // пропускаем ошибочные строки
+			continue
 		}
 		if len(vectorBlob) == 0 {
-			continue // нет вектора — пропускаем
+			continue
 		}
 		vec, err := blobToVector(vectorBlob)
 		if err != nil {
-			continue // не удалось преобразовать — пропускаем
+			continue
 		}
 		score := cosineSimilarity(queryVec, vec)
 		results = append(results, scoredText{text: text, score: score})
@@ -291,17 +289,14 @@ func searchByVector(db *sql.DB, query string, topN int) ([]string, error) {
 		return nil, fmt.Errorf("ошибка итерации: %w", err)
 	}
 
-	// Сортируем по убыванию сходства
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].score > results[j].score
 	})
 
-	// Берём topN
 	if len(results) > topN {
 		results = results[:topN]
 	}
 
-	// Извлекаем только тексты
 	out := make([]string, len(results))
 	for i, r := range results {
 		out[i] = r.text
@@ -827,20 +822,20 @@ func streamChatCompletion(url string, payload map[string]interface{}) (string, e
 	return fullResponse, nil
 }
 
-func tryIdentityResponse(input string) (string, bool) {
-	lower := strings.ToLower(strings.TrimSpace(input))
-	switch {
-	case lower == "привет" || strings.HasPrefix(lower, "привет ") || lower == "здравствуй":
-		return "Привет! Я Nexus, помощник Максима. Чем могу помочь?", true
-	case lower == "нексус" || lower == "nexus":
-		return "Да, я здесь. Я Nexus — твой локальный помощник. Что нужно?", true
-	case strings.Contains(lower, "кто я") || strings.Contains(lower, "кто такой я"):
-		return "Ты — Максим, мой создатель и разработчик Nexus.", true
-	case strings.Contains(lower, "кто ты") || strings.Contains(lower, "кто такой nexus") || strings.Contains(lower, "кто такой нексус"):
-		return "Я Nexus — локальный AI-помощник, созданный тобой, Максим. Помогаю с кодом, идеями и проектами.", true
-	}
-	return "", false
-}
+// func tryIdentityResponse(input string) (string, bool) {
+// 	lower := strings.ToLower(strings.TrimSpace(input))
+// 	switch {
+// 	case lower == "привет" || strings.HasPrefix(lower, "привет ") || lower == "здравствуй":
+// 		return "Привет! Я Nexus, помощник Максима. Чем могу помочь?", true
+// 	case lower == "нексус" || lower == "nexus":
+// 		return "Да, я здесь. Я Nexus — твой локальный помощник. Что нужно?", true
+// 	case strings.Contains(lower, "кто я") || strings.Contains(lower, "кто такой я"):
+// 		return "Ты — Максим, мой создатель и разработчик Nexus.", true
+// 	case strings.Contains(lower, "кто ты") || strings.Contains(lower, "кто такой nexus") || strings.Contains(lower, "кто такой нексус"):
+// 		return "Я Nexus — локальный AI-помощник, созданный тобой, Максим. Помогаю с кодом, идеями и проектами.", true
+// 	}
+// 	return "", false
+// }
 
 func buildRequestMessages(history []map[string]string, extraSystem, userInput string) []map[string]string {
 	request := make([]map[string]string, len(history))
@@ -962,13 +957,13 @@ Nexus: Я Nexus — твой локальный AI-помощник.`
 		searchQuery := ""
 		lower := strings.ToLower(userInput)
 
-		if response, ok := tryIdentityResponse(userInput); ok {
-			fmt.Println("Nexus:", response)
-			recordTurn(&messages, userInput, response)
-			_ = addToMemory("Пользователь: "+userInput, "dialog")
-			_ = addToMemory("Nexus: "+response, "dialog")
-			continue
-		}
+		// if response, ok := tryIdentityResponse(userInput); ok {
+		// 	fmt.Println("Nexus:", response)
+		// 	recordTurn(&messages, userInput, response)
+		// 	_ = addToMemory("Пользователь: "+userInput, "dialog")
+		// 	_ = addToMemory("Nexus: "+response, "dialog")
+		// 	continue
+		// }
 
 		// --- Обработка запроса времени ---
 		if strings.Contains(lower, "время") || strings.Contains(lower, "часы") || strings.Contains(lower, "сколько времени") {
