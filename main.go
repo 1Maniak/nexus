@@ -39,11 +39,24 @@ const (
 	maxGeneratedTokens = 2048
 )
 
+// Режим работы: "dev" — все логи, "prod" — только ошибки и диалог
+var appMode = "dev"
+
 func printSystem(msg string) {
-	fmt.Println(string(colorGray) + msg + string(colorReset))
+	if appMode == "dev" {
+		fmt.Println(string(colorGray) + msg + string(colorReset))
+	}
+}
+
+// Для отладочного мусора, который точно не нужен в prod
+func printDebug(msg string) {
+	if appMode == "dev" {
+		fmt.Println(string(colorGray) + "[DEBUG] " + msg + string(colorReset))
+	}
 }
 
 func printError(msg string) {
+	// Ошибки показываем ВСЕГДА, даже в prod
 	fmt.Println(string(colorRed) + msg + string(colorReset))
 }
 
@@ -761,7 +774,8 @@ func buildChatPayload(messages []map[string]string) map[string]interface{} {
 		"messages":          messages,
 		"stream":            true,
 		"temperature":       0.5,
-		"top_p":             0.50,
+		"top_k":             40,
+		"top_p":             0.85,
 		"repeat_penalty":    1.25,
 		"frequency_penalty": 0.35,
 		"presence_penalty":  0.2,
@@ -863,6 +877,12 @@ func recordTurn(messages *[]map[string]string, userInput, response string) {
 
 // --- Основной клиент ---
 func main() {
+
+	// Разбор аргументов командной строки
+	if len(os.Args) > 1 && os.Args[1] == "--prod" {
+		appMode = "prod"
+	}
+
 	var err error
 	db, err = initDB("./nexus_memory.db")
 	if err != nil {
@@ -1108,14 +1128,14 @@ Nexus: Я Nexus — твой локальный AI-помощник.`
 				}
 			}
 			if !handled && searchQuery != "" {
-				fmt.Print("Nexus ищет в интернете...\n")
+				printSystem("Nexus ищет в интернете...\n")
 				result, err := webSearch(searchQuery)
 				if err != nil {
 					printError("Ошибка поиска: " + err.Error())
 					handled = true
 					continue
 				}
-				fmt.Println("Готово!")
+				printSystem("Готово!")
 
 				number := extractNumber(result)
 				contextMsg := "Ты получил результаты поиска по запросу. Используй только эту информацию для ответа. Если точных данных нет, скажи, что не знаешь. Не выдумывай цифры. Отвечай только на русском.\n\nРезультаты поиска:\n" + result
