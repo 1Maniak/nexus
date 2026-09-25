@@ -923,6 +923,12 @@ func main() {
 - Ты помогаешь с кодом, программированием, идеями и проектами. 
 - Ты написан на языке Go
 
+ВАЖНО: Ты пишешь ТОЛЬКО кириллицей. Никаких иероглифов, 
+никаких латинских слов без необходимости. Если сомневаешься — 
+переформулируй на русском.
+
+Запрещено: использовать китайские, японские, арабские символы.
+
 Примеры:
 Максим: Привет
 Nexus: Привет! Я Nexus, помощник Максима. Чем могу помочь?
@@ -1146,10 +1152,16 @@ Nexus: Я Nexus — твой локальный AI-помощник.`
 		}
 
 		requestMessages := buildRequestMessages(messages, ragContext, userInput)
+
+		start := time.Now()
 		fullResponse, err := streamChatCompletion(url, buildChatPayload(requestMessages))
-		if err != nil {
-			printError("Ошибка отправки запроса: " + err.Error())
-			continue
+		elapsed := time.Since(start)
+
+		// Замер скорости
+		tokens := len([]rune(fullResponse)) / 4
+		if elapsed.Seconds() > 0 {
+			speed := float64(tokens) / elapsed.Seconds()
+			printSystem(fmt.Sprintf("Скорость: %.1f ток/с (%.1f сек, ~%d токенов)", speed, elapsed.Seconds(), tokens))
 		}
 
 		recordTurn(&messages, userInput, fullResponse)
