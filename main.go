@@ -19,13 +19,33 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/ledongthuc/pdf"
 	"github.com/nguyenthenguyen/docx"
 	"golang.org/x/net/html"
+	"golang.org/x/sys/windows"
 	_ "modernc.org/sqlite"
 )
+
+func enableANSI() {
+	kernel32 := windows.NewLazyDLL("kernel32.dll")
+	getConsoleMode := kernel32.NewProc("GetConsoleMode")
+	setConsoleMode := kernel32.NewProc("SetConsoleMode")
+
+	handle, err := windows.GetStdHandle(windows.STD_OUTPUT_HANDLE)
+	if err != nil {
+		return
+	}
+
+	var mode uint32
+	_, _, _ = getConsoleMode.Call(uintptr(handle), uintptr(unsafe.Pointer(&mode)))
+
+	// ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+	mode |= 0x0004
+	_, _, _ = setConsoleMode.Call(uintptr(handle), uintptr(mode))
+}
 
 // --- Цвета и параметры LLM ---
 const (
@@ -37,6 +57,12 @@ const (
 	maxHistoryMessages = 20
 	maxRAGResults      = 3
 	maxGeneratedTokens = 2048
+
+	// Пути к сервисам
+	ollamaURL   = "http://localhost:11434"
+	llamaURL    = "http://localhost:8080/v1/chat/completions"
+	llamaServer = `C:\Users\maksi\AI\llama.cpp\llama-server.exe`
+	llamaModel  = `C:\Users\maksi\AI\llama.cpp\models\qwen2.5-3b-instruct-q4_k_m.gguf`
 )
 
 // Режим работы: "dev" — все логи, "prod" — только ошибки и диалог
@@ -62,7 +88,7 @@ func printError(msg string) {
 
 // --- Эмбеддинги через Ollama ---
 func getEmbedding(text string) ([]float64, error) {
-	url := "http://localhost:11434/api/embeddings"
+	url := ollamaURL + "/api/embeddings"
 	payload := map[string]interface{}{
 		"model":  "nomic-embed-text",
 		"prompt": text,
@@ -369,7 +395,7 @@ type KnowledgeState struct {
 	Files map[string]FileState `json:"files"`
 }
 
-const stateFile = "knowledge_state.json"
+const stateFile = "data/knowledge_state.json"
 
 func loadKnowledgeState() (*KnowledgeState, error) {
 	data, err := os.ReadFile(stateFile)
@@ -877,14 +903,18 @@ func recordTurn(messages *[]map[string]string, userInput, response string) {
 
 // --- Основной клиент ---
 func main() {
+	ensureTerminal()
+	enableANSI()
 
 	// Разбор аргументов командной строки
 	if len(os.Args) > 1 && os.Args[1] == "--prod" {
 		appMode = "prod"
 	}
 
+	ensureServices()
+
 	var err error
-	db, err = initDB("./nexus_memory.db")
+	db, err = initDB("./data/nexus_memory.db")
 	if err != nil {
 		printError("Ошибка инициализации БД: " + err.Error())
 		os.Exit(1)
@@ -897,7 +927,7 @@ func main() {
 	fmt.Println()
 
 	printSystem("Загружаю базу знаний...")
-	if err := loadKnowledgeFromFolder("C:\\Users\\maksi\\AI\\base"); err != nil {
+	if err := loadKnowledgeFromFolder("./base"); err != nil {
 		printError("Ошибка загрузки базы знаний: " + err.Error())
 	} else {
 		printSystem("База знаний загружена")
@@ -913,7 +943,7 @@ func main() {
 	}
 	fmt.Println()
 
-	url := "http://localhost:8080/v1/chat/completions"
+	url := llamaURL
 	scanner := bufio.NewScanner(os.Stdin)
 
 	systemContent := `Ты — Nexus, локальный AI-помощник Максима.

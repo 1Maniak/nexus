@@ -1,18 +1,8 @@
-# База данных с диалогами (она большая и не нужна в Git)
-nexus_memory.db
-nexus_memory.db-shm
-nexus_memory.db-wal
-
-# Файлы состояния базы знаний
-knowledge_state.json
-
-# Скомпилированные бинарники
 nexus.exe
-
-# Логи и временные файлы
-*.log
-*.tmp
-
-# Инфа для гит - команд
-GIT_GUIDE.mdd
+nexus.exe~
+*.exe
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/knowledge_state.json
 desktop.ini
