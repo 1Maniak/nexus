@@ -1,8 +1,8 @@
 nexus.exe
 nexus.exe~
 *.exe
+desktop.ini
 data/*.db
 data/*.db-shm
 data/*.db-wal
 data/knowledge_state.json
-desktop.ini
