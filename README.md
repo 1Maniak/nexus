@@ -1,266 +1,167 @@
-# Nexus - Local AI Agent
+<div align="center">
 
-[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://go.dev/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v1.5.1-green.svg)](CHANGELOG.md)
+![Header](https://capsule-render.vercel.app/api?type=waving&color=0:2575fc,100:6a11cb&height=200&section=header&text=Nexus&fontSize=80&fontColor=ffffff&desc=Local%20AI%20Agent&descAlignY=60&descSize=24)
 
-Локальный AI-агент с долговременной памятью, RAG-поиском и инструментами. Работает полностью офлайн.
+[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![Version](https://img.shields.io/badge/version-v1.6.0-green?style=for-the-badge)](docs/CHANGELOG.md)
 
-Local AI agent with long-term memory, RAG search, and tools. Fully offline.
+**Локальный AI-агент с долговременной памятью, RAG-поиском и веб-интерфейсом.**
+**Работает полностью офлайн, без облачных зависимостей.**
+
+</div>
 
 ---
 
-## Русский
+## 📖 О проекте
 
-### О проекте
+**Nexus** - это локальный AI-агент, разработанный для автономной работы. Все данные обрабатываются на устройстве пользователя, ничего не уходит в интернет. Это решение для тех, кто ценит приватность и независимость от зарубежных API.
 
-Nexus - это локальный AI-агент, разработанный для автономной работы без облачных зависимостей. Проект создан как альтернатива зарубежным AI-сервисам: все данные обрабатываются на устройстве пользователя, ничего не уходит в интернет.
+Агент использует модель **Qwen 2.5 3B** через llama.cpp, хранит диалоги в **SQLite** с векторным поиском и общается с вами через удобный **веб-интерфейс**.
 
-Агент использует языковую модель Qwen 2.5 3B через Ollama, хранит диалоги в SQLite с векторным поиском и умеет работать с файлами, искать информацию в интернете и запоминать контекст.
+### 🌟 Ключевые возможности
 
-### Зачем это нужно
+| Фича | Описание |
+|------|----------|
+| 💬 **Веб-интерфейс** | Удобный чат в браузере с темной темой и анимацией загрузки. |
+| 🧠 **Долговременная память** | Все диалоги сохраняются в базе данных и не теряются. |
+| 🔍 **RAG-поиск** | Семантический поиск по смыслу через эмбеддинги и косинусное сходство. |
+| 🌐 **Интернет-поиск** | Получение актуальных данных через DuckDuckGo. |
+| 📁 **Файлы** | Чтение и запись 8+ форматов (PDF, DOCX, CSV, HTML, TXT и др.). |
+| ⚡ **Автоматизация** | Автозапуск сервисов, открытие браузера и кнопка полного выключения. |
+| 🔄 **CI/CD** | Автоматические посты о релизах в Telegram и ВКонтакте. |
 
-- Приватность: данные не покидают устройство.
-- Независимость: работает без интернета и облачных API.
-- Автономность: сам решает, какие инструменты использовать.
-- Расширяемость: легко добавлять новые функции (философия TFT).
+---
 
-### Возможности
+## 🛠 Стек технологий
 
-- Долговременная память: все диалоги сохраняются в SQLite.
-- RAG-поиск: семантический поиск по памяти через эмбеддинги и косинусное сходство.
-- Интернет-поиск: актуальные данные через DuckDuckGo.
-- Работа с файлами: чтение и запись 8+ форматов (PDF, DOCX, CSV, HTML, TXT, MD, JSON, GO).
-- Время и дата: всегда знает текущее время.
-- CI/CD: автоматические уведомления о релизах в Telegram и VK.
-- Режимы работы: dev (все логи) и prod (только ответы).
+<div align="center">
 
-### Архитектура
+![Go](https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-000000?style=flat-square&logo=ollama&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white)
+
+</div>
+
+---
+
+## 🏗 Архитектура
 
 ```mermaid
 flowchart TD
-    U([Пользователь]) --> IN[Ввод текста]
-    IN --> TIME{Запрос времени?}
-    TIME -- Да --> RT[getCurrentTime]
-    TIME -- Нет --> FILE{Команды файлов?}
-    FILE -- Да --> FOP[Чтение / запись]
-    FILE -- Нет --> SEARCH{Интернет-поиск?}
-    SEARCH -- Да --> WS[webSearch DuckDuckGo]
-    WS --> LLM
-    SEARCH -- Нет --> RAG[searchByVector]
-    RAG --> LLM[streamChatCompletion Qwen через Ollama]
-    LLM --> U
+    U([Пользователь]) --> WEB[Веб-интерфейс :8081]
+    WEB --> RAG[Поиск в памяти RAG]
+    WEB --> WEBSEARCH[Поиск в интернете]
+    RAG --> DB[(SQLite)]
+    RAG --> OLLAMA[Ollama Эмбеддинги]
+    WEBSEARCH --> DDG[DuckDuckGo]
+    WEB --> LLM[llama.cpp / Qwen 2.5 3B]
+    LLM --> WEB
 ```
-
-Подробные схемы в [ARCHITECTURE.md](ARCHITECTURE.md).
-
-### Стек технологий
-
-| Компонент | Технология |
-|-----------|------------|
-| Язык | Go 1.23+ |
-| LLM | Qwen 2.5 3B (через Ollama) |
-| Эмбеддинги | nomic-embed-text |
-| База данных | SQLite (modernc.org/sqlite) |
-| Поиск | DuckDuckGo (goquery) |
-| PDF | ledongthuc/pdf |
-| DOCX | nguyenthenguyen/docx |
-| CI/CD | GitHub Actions |
-
-### Быстрый старт
-
-Требования:
-
-- Go 1.23+ (https://go.dev/dl/)
-- Ollama (https://ollama.com/)
-- llama.cpp (https://github.com/ggerganov/llama.cpp)
-
-Установка:
-
-1. Клонировать репозиторий:
-
-```bash
-git clone https://github.com/1Maniak/nexus-client.git
-cd nexus-client
-```
-
-2. Установить модели через Ollama:
-
-```bash
-ollama pull qwen2.5:3b
-ollama pull nomic-embed-text
-```
-
-3. Запустить llama-server:
-
-```bash
-llama-server.exe -m models/qwen2.5-3b-instruct-q4_k_m.gguf --port 8080 -c 4096 -t 8
-```
-
-4. Собрать и запустить Nexus:
-
-```bash
-go build -o nexus.exe main.go
-./nexus.exe           # dev-режим
-./nexus.exe --prod    # prod-режим
-```
-
-### Структура проекта
-
-```
-nexus-client/
-  main.go              точка входа
-  base/                база знаний (Nexus.txt, Create.txt)
-  CHANGELOG.md         история версий
-  ARCHITECTURE.md      схемы архитектуры
-  ROADMAP.md           план развития
-  GIT_GUIDE.md         руководство по Git
-  README.md            этот файл
-```
-
-### Использование
-
-| Команда | Действие |
-|---------|----------|
-| Привет | Приветствие |
-| Сколько времени? | Показать текущее время |
-| Прочитай файл X | Показать содержимое файла |
-| Открой файл X | Открыть файл в приложении |
-| Запиши в файл X текст | Записать текст в файл |
-| !поиск курс доллара | Поиск в интернете |
-| exit | Выход |
-
-### Roadmap
-
-- [x] v1.0.0: первая рабочая версия
-- [x] v1.5.0: векторный RAG
-- [ ] v1.5.2: новая файловая система
-- [ ] v2.0.0: агентный цикл (tool calling)
-- [ ] NetScope: утилита диагностики сети
-
-Подробнее в [ROADMAP.md](ROADMAP.md).
-
-### Вклад
-
-Проект открыт для идей и предложений. Если хочешь помочь, создай Issue или Pull Request.
-
-### Лицензия
-
-MIT License. См. [LICENSE](LICENSE).
-
-### Контакты
-
-- GitHub: https://github.com/1Maniak
-- Telegram: https://t.me/Makson4ikxD
-- Email: ***
 
 ---
 
-## English
+## 🚀 Быстрый старт
 
-### About
+### Требования
+- **Go 1.23+** - [Скачать](https://go.dev/dl/)
+- **Ollama** - [Скачать](https://ollama.com/)
+- **llama.cpp** - [Релизы](https://github.com/ggerganov/llama.cpp/releases)
 
-Nexus is a local AI agent designed for autonomous operation without cloud dependencies. The project is an alternative to foreign AI services: all data is processed on your device, nothing goes to the internet.
+### Установка
 
-The agent uses Qwen 2.5 3B via Ollama, stores dialogs in SQLite with vector search, and can work with files, search the internet, and remember context.
+**1. Клонируйте репозиторий:**
+    git clone https://github.com/1Maniak/nexus-client.git
+    cd nexus-client
 
-### Why It Matters
+**2. Скачайте модель эмбеддингов:**
+    ollama pull nomic-embed-text
 
-- Privacy: data never leaves your device.
-- Independence: works without internet or cloud APIs.
-- Autonomy: decides which tools to use on its own.
-- Extensibility: easy to add new features (TFT philosophy).
+**3. Подготовьте llama.cpp:**
+Создайте папку `llama.cpp` в корне проекта. Положите туда `llama-server.exe` и папку `models` с файлом `qwen2.5-3b-instruct-q4_k_m.gguf`.
 
-### Features
+**4. Соберите проект:**
+    # Версия для разработки (с логами в консоли)
+    go build -o nexus-dev.exe .
 
-- Long-term memory: all dialogs stored in SQLite.
-- RAG search: semantic search via embeddings and cosine similarity.
-- Web search: fresh data via DuckDuckGo.
-- File operations: read/write 8+ formats (PDF, DOCX, CSV, HTML, TXT, MD, JSON, GO).
-- Time and date: always knows current time.
-- CI/CD: automatic release notifications to Telegram and VK.
-- Modes: dev (all logs) and prod (responses only).
+    # Релизная версия (без консоли, сразу открывает браузер)
+    go build -ldflags="-H windowsgui" -o nexus.exe .
 
-### Architecture
+**5. Запустите:**
+Запустите `nexus-dev.exe` или `nexus.exe`. Программа сама поднимет сервер и откроет браузер на `http://localhost:8081`.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed diagrams.
+---
 
-### Tech Stack
+## 🕹 Использование
 
-| Component | Technology |
-|-----------|------------|
-| Language | Go 1.23+ |
-| LLM | Qwen 2.5 3B (via Ollama) |
-| Embeddings | nomic-embed-text |
-| Database | SQLite (modernc.org/sqlite) |
-| Search | DuckDuckGo (goquery) |
-| PDF | ledongthuc/pdf |
-| DOCX | nguyenthenguyen/docx |
-| CI/CD | GitHub Actions |
+| Команда | Действие |
+|---------|----------|
+| `Привет` | Приветствие |
+| `Сколько времени?` | Показать текущее время |
+| `Прочитай файл C:\test.txt` | Показать содержимое файла |
+| `Запиши в файл C:\test.txt текст` | Записать текст в файл |
+| `!поиск курс доллара` | Поиск в интернете |
+| `exit` | Выход из консоли |
 
-### Quick Start
+---
+
+## 🗺 Roadmap
+
+- [x] **v1.0.0** - Первая рабочая версия
+- [x] **v1.5.0** - Векторный RAG
+- [x] **v1.6.0** - Веб-интерфейс и оптимизация
+- [ ] **v2.0.0** - Агентный цикл (tool calling)
+- [ ] **NetScope** - Диагностика сети
+
+Подробнее в [docs/ROADMAP.md](docs/ROADMAP.md).
+
+---
+
+<details>
+<summary><b>🇬🇧 Click to expand English version</b></summary>
+
+## About
+
+Nexus is a local AI agent designed for autonomous operation without cloud dependencies. All data is processed on your device. The agent uses Qwen 2.5 3B via llama.cpp, stores dialogs in SQLite with vector search, and communicates through a web interface.
+
+## Features
+
+- **Web Interface**: local chat in the browser with a dark theme.
+- **Long-term memory**: all dialogs stored in SQLite.
+- **RAG search**: semantic search via embeddings and cosine similarity.
+- **Web search**: fresh data via DuckDuckGo.
+- **File operations**: read/write 8+ formats.
+- **Automation**: full process shutdown button, auto-launch of server and browser.
+- **CI/CD**: automatic release notifications to Telegram and VK.
+
+## Quick Start
 
 Requirements:
-
 - Go 1.23+ (https://go.dev/dl/)
 - Ollama (https://ollama.com/)
-- llama.cpp (https://github.com/ggerganov/llama.cpp)
-
-Installation:
+- Downloaded llama.cpp binaries (https://github.com/ggerganov/llama.cpp/releases)
 
 1. Clone the repository:
+    git clone https://github.com/1Maniak/nexus-client.git
+    cd nexus-client
 
-```bash
-git clone https://github.com/1Maniak/nexus-client.git
-cd nexus-client
-```
+2. Pull embedding model via Ollama:
+    ollama pull nomic-embed-text
 
-2. Pull models via Ollama:
+3. Prepare llama.cpp:
+Create a `llama.cpp` folder in the project root. Place `llama-server.exe` and a `models` folder with `qwen2.5-3b-instruct-q4_k_m.gguf` inside.
 
-```bash
-ollama pull qwen2.5:3b
-ollama pull nomic-embed-text
-```
+4. Build the project:
+    # For development (console with logs)
+    go build -o nexus-dev.exe .
 
-3. Start llama-server:
+    # For release (no console, opens browser)
+    go build -ldflags="-H windowsgui" -o nexus.exe .
 
-```bash
-llama-server.exe -m models/qwen2.5-3b-instruct-q4_k_m.gguf --port 8080 -c 4096 -t 8
-```
-
-4. Build and run Nexus:
-
-```bash
-go build -o nexus.exe main.go
-./nexus.exe           # dev mode
-./nexus.exe --prod    # prod mode
-```
-
-### Usage
-
-| Command | Action |
-|---------|--------|
-| Hello | Greeting |
-| What time is it? | Show current time |
-| Read file X | Show file content |
-| Open file X | Open file in default app |
-| Write to file X text | Write text to file |
-| !search dollar rate | Web search |
-| exit | Quit |
-
-### Roadmap
-
-- [x] v1.0.0: first working version
-- [x] v1.5.0: vector RAG
-- [ ] v1.5.2: new file system
-- [ ] v2.0.0: agent loop (tool calling)
-- [ ] NetScope: network diagnostics tool
-
-See [ROADMAP.md](ROADMAP.md) for details.
-
-### Contributing
-
-The project is open for ideas and suggestions. Create an Issue or Pull Request.
+5. Run: Launch `nexus-dev.exe` or `nexus.exe`. The program will start services and open the browser at `http://localhost:8081`.
 
 ### License
 
@@ -270,4 +171,17 @@ MIT License. See [LICENSE](LICENSE).
 
 - GitHub: https://github.com/1Maniak
 - Telegram: https://t.me/Makson4ikxD
-- Email: ***
+
+</details>
+
+---
+
+<div align="center">
+
+### 📄 Лицензия
+
+Этот проект распространяется под лицензией **MIT**. Вы можете свободно использовать, изменять и распространять код, при условии сохранения оригинального уведомления об авторских правах.
+
+[![Footer](https://capsule-render.vercel.app/api?type=waving&color=0:6a11cb,100:2575fc&height=100&section=footer)](https://github.com/1Maniak)
+
+</div>
