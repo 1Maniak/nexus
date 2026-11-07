@@ -14,7 +14,8 @@ jobs:
 
       - name: Extract latest changelog
         run: |
-          awk 'index($0, "##[v") == 1 {if (p) exit; p=1; next} p' docs/CHANGELOG.md > latest_changelog.txt
+          # Извлекаем первую запись о версии (от первого заголовка до второго)
+          awk '/^## \ [v/{if (p) exit; p=1; next} p' docs/CHANGELOG.md > latest_changelog.txt
 
       - name: Send to Telegram
         run: |
