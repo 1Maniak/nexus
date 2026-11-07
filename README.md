@@ -74,7 +74,7 @@ flowchart TD
 ### Установка
 
 **1. Клонируйте репозиторий:**
-    git clone https://github.com/1Maniak/nexus-client.git
+    https://github.com/1Maniak/nexus.git
     cd nexus-client
 
 **2. Скачайте модель эмбеддингов:**

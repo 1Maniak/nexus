@@ -19,9 +19,13 @@ func setupCleanup() {
 }
 
 func cleanupProcesses() {
-	// Убиваем llama-server, чтобы освободить порт 8080
-	exec.Command("taskkill", "/F", "/IM", "llama-server.exe").Run()
+	// Убиваем llama-server 
+	cmd1 := exec.Command("taskkill", "/F", "/T", "/IM", "llama-server.exe")
+	cmd1.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd1.Run()
 
-	// Для закрытия Ollama
-	exec.Command("taskkill", "/F", "/IM", "ollama.exe").Run()
+	// Убиваем ollama
+	cmd2 := exec.Command("taskkill", "/F", "/T", "/IM", "ollama.exe")
+	cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	cmd2.Run()
 }

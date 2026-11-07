@@ -5,31 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexus AI</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
+    
     <style>
         :root {
             --bg-body: #0d1117;
             --bg-panel: #161b22;
             --bg-message-ai: #21262d;
-            --bg-message-user: #1f6feb;
+            --bg-message-user: linear-gradient(135deg, #4f46e5, #9333ea);
             --border-color: #30363d;
             --text-main: #c9d1d9;
             --text-muted: #8b949e;
-            --accent-color: #58a6ff;
+            --accent-color: #a855f7;
             --danger-color: #da3633;
             --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
         }
 
         body.light-theme {
-            --bg-body: #eef1f4;
-            --bg-panel: #fafbfc;
-            --bg-message-ai: #f1f4f7;
-            --bg-message-user: #2f6fca;
-            --border-color: #000000;
-            --text-main: #2d3339;
-            --text-muted: #656d76;
-            --accent-color: #2f6fca;
-            --danger-color: #c43434;
+            --bg-body: #d1d5db;
+            --bg-panel: #ffffff;
+            --bg-message-ai: #f3f4f6;
+            --bg-message-user: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            --border-color: #9ca3af;
+            --text-main: #111827;
+            --text-muted: #4b5563;
+            --accent-color: #7c3aed;
+            --danger-color: #dc2626;
         }
 
         body {
@@ -38,98 +38,325 @@
             font-family: var(--font-family);
             display: flex;
             justify-content: center;
+            align-items: center;
             height: 100vh;
             margin: 0;
             overflow: hidden;
             transition: background-color 0.25s, color 0.25s;
         }
 
-        #chat-container {
+        #app-layout {
+            display: flex;
+            gap: 20px;
             width: 100%;
-            max-width: 900px;
+            max-width: 1600px;
+            height: calc(100vh - 40px);
+            margin: 20px;
+            position: relative;
+        }
+
+        #chat-container {
+            flex: 1;
             display: flex;
             flex-direction: column;
             background-color: var(--bg-panel);
-            margin: 20px;
-            border-radius: 8px;
+            border-radius: 12px;
             border: 1px solid var(--border-color);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             overflow: hidden;
-            transition: background-color 0.25s, border-color 0.25s, box-shadow 0.25s;
+            transition: all 0.3s;
+            position: relative;
         }
 
-        #top-bar {
+        .banner {
+            position: relative;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(135deg, #050b24 0%, #0d1b4b 30%, #3b0a45 70%, #6b0f49 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .banner-title {
+            margin: 0;
+            font-size: 36px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            background: linear-gradient(to right, #818cf8, #c084fc, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #theme-toggle {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: rgba(0, 0, 0, 0.4);
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            z-index: 10;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+        }
+
+        #theme-toggle:hover {
+            background-color: rgba(0, 0, 0, 0.7);
+            transform: scale(1.05);
+        }
+
+        #theme-toggle svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
+        #toggle-panel-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: rgba(0, 0, 0, 0.4);
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            z-index: 10;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+        }
+
+        #toggle-panel-btn:hover {
+            background-color: rgba(0, 0, 0, 0.7);
+            transform: rotate(45deg);
+        }
+
+        #toggle-panel-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        #tools-panel {
+            width: 320px;
+            height: 100%;
+            background-color: var(--bg-panel);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #tools-panel.hidden {
+            width: 0;
+            opacity: 0;
+            border: none;
+            margin-left: -20px;
+            pointer-events: none;
+        }
+
+        .tools-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 20px;
-            background-color: var(--bg-panel);
-            border-bottom: 1px solid var(--border-color);
-            transition: background-color 0.25s, border-color 0.25s;
         }
 
-        #top-bar h1 {
+        .tools-header h3 {
             margin: 0;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .close-panel-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .close-panel-btn:hover {
             color: var(--text-main);
-            transition: color 0.25s;
+        }
+
+        .tools-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .tool-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tool-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 2px;
+            white-space: nowrap;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .status-item span:last-child {
+            color: var(--text-main);
+            font-weight: 600;
         }
 
         .btn {
-            background-color: transparent;
+            width: 100%;
+            background-color: var(--bg-body);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            padding: 5px 12px;
+            padding: 8px 12px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 13px;
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            font-weight: 500;
+            transition: all 0.2s;
             font-family: inherit;
+            text-align: center;
+            white-space: nowrap;
         }
 
         .btn:hover {
             background-color: var(--border-color);
         }
 
+        .btn-accent {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .btn-accent:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
         .btn-danger {
             color: var(--danger-color);
-            border-color: rgba(196, 52, 52, 0.4);
+            border-color: var(--danger-color);
+            background-color: transparent;
         }
 
         .btn-danger:hover {
-            background-color: rgba(196, 52, 52, 0.08);
-            border-color: var(--danger-color);
+            background-color: var(--danger-color);
+            color: white;
         }
 
-        #theme-toggle {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-panel);
-            color: var(--text-main);
-            cursor: pointer;
+        .tools-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
             display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            z-index: 1000;
-            transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+            flex-direction: column;
+            gap: 10px;
         }
 
-        #theme-toggle:hover {
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background-color: var(--border-color);
-            transform: scale(1.05);
+            transition: .4s;
+            border-radius: 34px;
         }
 
-        #theme-toggle svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(18px);
+        }
+
+        #drop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(13, 17, 23, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            border: 2px dashed var(--accent-color);
+            border-radius: 12px;
+            pointer-events: none;
+        }
+
+        #drop-overlay.active {
+            display: flex;
+        }
+
+        #drop-overlay span {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--accent-color);
         }
 
         #chat-box {
@@ -145,6 +372,7 @@
             display: flex;
             gap: 16px;
             max-width: 85%;
+            align-items: flex-start;
         }
 
         .message-wrapper.user {
@@ -159,15 +387,20 @@
         .avatar {
             width: 32px;
             height: 32px;
-            border-radius: 4px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
             background-color: var(--bg-body);
             border: 1px solid var(--border-color);
-            color: var(--text-main);
-            transition: background-color 0.25s, border-color 0.25s, color 0.25s;
+            overflow: hidden;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .avatar svg {
@@ -177,42 +410,44 @@
         }
 
         .avatar.user {
-            background-color: var(--bg-message-user);
-            border-color: var(--bg-message-user);
+            background: var(--bg-message-user);
+            border: none;
             color: #ffffff;
         }
 
         .message {
             padding: 12px 16px;
-            border-radius: 6px;
+            border-radius: 8px;
             line-height: 1.5;
             word-wrap: break-word;
-            overflow-wrap: break-word;
             font-size: 14px;
-            transition: background-color 0.25s, color 0.25s, border-color 0.25s;
         }
 
         .message.user {
-            background-color: var(--bg-message-user);
+            background: var(--bg-message-user);
             color: #ffffff;
+            border-bottom-right-radius: 2px;
         }
 
         .message.ai {
             background-color: var(--bg-message-ai);
-            color: var(--text-main);
             border: 1px solid var(--border-color);
+            border-bottom-left-radius: 2px;
         }
 
         .code-wrapper {
             position: relative;
             margin: 12px 0;
+            display: block;
+            width: 100%;
         }
 
         .copy-code-btn {
             position: absolute;
             top: 8px;
             right: 8px;
-            background-color: rgba(255, 255, 255, 0.1);
+            z-index: 10;
+            background-color: var(--bg-panel);
             border: 1px solid var(--border-color);
             color: var(--text-main);
             border-radius: 4px;
@@ -223,7 +458,7 @@
         }
 
         .copy-code-btn:hover {
-            background-color: rgba(255, 255, 255, 0.2);
+            background-color: var(--bg-body);
         }
 
         .message pre {
@@ -231,14 +466,13 @@
             padding: 16px;
             padding-top: 32px;
             border-radius: 6px;
-            overflow-x: auto;
             border: 1px solid var(--border-color);
+            overflow-x: auto;
             margin: 0;
-            transition: background-color 0.25s, border-color 0.25s;
         }
 
         .message code {
-            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             font-size: 13px;
         }
 
@@ -256,32 +490,44 @@
             color: var(--text-muted);
             margin-top: 8px;
             text-align: right;
-            transition: color 0.25s;
+            user-select: none;
         }
 
         .thinking {
             display: flex;
             align-items: center;
-            height: 20px;
-            padding: 10px 16px;
+            justify-content: center;
+            height: 14px;
+            padding: 2px 8px;
+            width: max-content;
         }
 
         .dot {
-            width: 6px;
-            height: 6px;
-            background-color: var(--text-muted);
+            width: 5px;
+            height: 5px;
+            background-color: var(--accent-color);
             border-radius: 50%;
-            margin: 0 3px;
+            margin: 0 2px;
             animation: bounce 1.4s infinite ease-in-out both;
-            transition: background-color 0.25s;
         }
 
-        .dot:nth-child(1) { animation-delay: -0.32s; }
-        .dot:nth-child(2) { animation-delay: -0.16s; }
+        .dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
 
         @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
-            40% { transform: scale(1); opacity: 1; }
+            0%, 80%, 100% {
+                transform: scale(0);
+                opacity: 0.3;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
         #input-area {
@@ -290,89 +536,151 @@
             background-color: var(--bg-panel);
             border-top: 1px solid var(--border-color);
             gap: 12px;
-            transition: background-color 0.25s, border-color 0.25s;
+            flex-shrink: 0;
+            align-items: flex-end;
         }
 
         textarea {
             flex: 1;
-            padding: 10px 14px;
+            padding: 10px 16px;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
+            border-radius: 8px;
             background-color: var(--bg-body);
             color: var(--text-main);
             outline: none;
             resize: none;
             font-family: inherit;
             font-size: 14px;
-            height: 40px;
+            min-height: 46px;
             max-height: 200px;
-            overflow-y: hidden;
-            transition: border-color 0.2s, background-color 0.25s, color 0.25s;
+            overflow-y: auto;
+            transition: border-color 0.2s, background-color 0.25s;
+            line-height: 1.5;
+            box-sizing: border-box;
         }
 
         textarea:focus {
             border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2);
         }
 
         .send-btn {
-            padding: 0 20px;
-            background-color: var(--bg-message-ai);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
+            height: 46px;
+            padding: 0 32px;
+            background: var(--bg-message-user);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-            font-family: inherit;
+            font-weight: 600;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: 0.2s;
+            box-sizing: border-box;
         }
 
         .send-btn:hover {
-            background-color: var(--border-color);
+            filter: brightness(1.1);
         }
 
         .send-btn.stop-mode {
-            background-color: rgba(196, 52, 52, 0.08);
+            background: transparent;
             color: var(--danger-color);
-            border-color: var(--danger-color);
+            border: 1px solid var(--danger-color);
         }
 
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-panel); }
-        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
-    <div id="chat-container">
-        <div id="top-bar">
-            <h1>Nexus AI</h1>
-            <div>
-                <button class="btn" onclick="clearChat()">Очистить</button>
-                <button class="btn btn-danger" onclick="shutdown()">Выключить</button>
+    <div id="app-layout">
+        <div id="chat-container">
+            <div id="drop-overlay"><span>Отпустите файл для добавления в базу знаний</span></div>
+            
+            <div class="banner">
+                <button id="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему"></button>
+                <button id="toggle-panel-btn" onclick="togglePanel()" title="Настройки и статус">
+                    <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+                </button>
+                <h1 class="banner-title">Nexus</h1>
+            </div>
+            <div id="chat-box"></div>
+            <div id="input-area">
+                <textarea id="user-input" placeholder="Напишите сообщение..." rows="1" oninput="this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 200) + 'px';"></textarea>
+                <button class="send-btn" id="send-btn" onclick="handleSendOrStop()">Отправить</button>
             </div>
         </div>
 
-        <div id="chat-box"></div>
+        <div id="tools-panel" class="hidden">
+            <div class="tools-header">
+                <h3>Панель управления</h3>
+                <button class="close-panel-btn" onclick="togglePanel()">×</button>
+            </div>
+            
+            <div class="tools-content">
+                <div class="tool-section">
+                    <div class="tool-section-title">Инструменты</div>
+                    <div class="status-item" style="align-items: center; margin-bottom: 0;">
+                        <span>Поиск в интернете</span>
+                        <label class="switch">
+                            <input type="checkbox" id="web-search-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
 
-        <div id="input-area">
-            <textarea id="user-input" placeholder="Напишите сообщение..." rows="1" oninput="this.style.height = '40px'; this.style.height = this.scrollHeight + 'px'"></textarea>
-            <button class="send-btn" id="send-btn" onclick="handleSendOrStop()">Отправить</button>
+                <div class="tool-section">
+                    <div class="tool-section-title">Статус системы</div>
+                    <div class="status-item"><span>Модель:</span> <span id="model-name">--</span></div>
+                    <div class="status-item"><span>Сервер:</span> <span style="color: #22c55e;">Онлайн</span></div>
+                    <div class="status-item"><span>Токены:</span> <span id="token-count">0 / 4096</span></div>
+                </div>
+
+                <div class="tool-section">
+                    <div class="tool-section-title">Память (RAG)</div>
+                    <div class="status-item"><span>Записей в БД:</span> <span id="memory-count">--</span></div>
+                    <div class="status-item"><span>Файлы в базе:</span> <span id="knowledge-count">--</span></div>
+                    <button class="btn btn-accent" onclick="addFactPrompt()">Добавить факт</button>
+                </div>
+            </div>
+
+            <div class="tools-footer">
+                <button class="btn" onclick="clearChat()">Очистить историю</button>
+                <button class="btn btn-danger" onclick="shutdown()">Выключить Nexus</button>
+            </div>
         </div>
     </div>
-
-    <button id="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему"></button>
-
+    
     <script>
         const chatBox = document.getElementById('chat-box');
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
         const themeToggle = document.getElementById('theme-toggle');
+        const memoryCountEl = document.getElementById('memory-count');
+        const knowledgeCountEl = document.getElementById('knowledge-count');
+        const modelNameEl = document.getElementById('model-name');
+        const tokenCountEl = document.getElementById('token-count');
+        const dropOverlay = document.getElementById('drop-overlay');
 
         let currentController = null;
         let isGenerating = false;
+        let currentHistory = [];
 
         const svgUser = `<svg viewBox="0 0 16 16"><path d="M10.561 8.073a6.005 6.005 0 0 1 3.432 5.142.75.75 0 1 1-1.498.07 4.5 4.5 0 0 0-8.99 0 .75.75 0 0 1-1.498-.07 6.004 6.004 0 0 1 3.431-5.142 3.999 3.999 0 1 1 5.123 0ZM10.5 5a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"></path></svg>`;
-        const svgAI = `<svg viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM1.5 8a6.5 6.5 0 1 1 13 0 6.5 6.5 0 0 1-13 0Zm4.25-1.75h4.5v3.5h-4.5v-3.5Z"></path></svg>`;
         const svgSun = `<svg viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12Zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM11 1h2v3h-2V1Zm0 19h2v3h-2v-3ZM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93ZM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121ZM19.071 3.515l1.414 1.414L18.364 7.05l-1.414-1.414 2.121-2.121ZM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121ZM23 11v2h-3v-2h3ZM4 11v2H1v-2h3Z"></path></svg>`;
         const svgMoon = `<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1Z"></path></svg>`;
 
@@ -380,11 +688,9 @@
             if (theme === 'light') {
                 document.body.classList.add('light-theme');
                 themeToggle.innerHTML = svgMoon;
-                themeToggle.setAttribute('aria-label', 'Включить тёмную тему');
             } else {
                 document.body.classList.remove('light-theme');
                 themeToggle.innerHTML = svgSun;
-                themeToggle.setAttribute('aria-label', 'Включить светлую тему');
             }
             localStorage.setItem('nexus_theme', theme);
         }
@@ -394,21 +700,63 @@
             applyTheme(current === 'dark' ? 'light' : 'dark');
         }
 
+        function togglePanel() {
+            const panel = document.getElementById('tools-panel');
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) refreshStatus();
+        }
+
+        async function refreshStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                memoryCountEl.innerText = data.memory_count;
+                knowledgeCountEl.innerText = data.knowledge_files;
+                modelNameEl.innerText = data.model;
+                updateTokenCounter();
+            } catch (e) {
+                console.error("Не удалось получить статус", e);
+            }
+        }
+
+        function updateTokenCounter() {
+            let charCount = 0;
+            currentHistory.forEach(msg => charCount += msg.text.length);
+            const approxTokens = Math.floor(charCount / 4);
+            tokenCountEl.innerText = `${approxTokens} / 4096`;
+        }
+
+        function addFactPrompt() {
+            const fact = prompt("Введите факт, который Nexus должен запомнить:");
+            if (fact) {
+                userInput.value = "Запомни факт: " + fact;
+                sendMessage();
+            }
+        }
+
+        function clearChat() {
+            if (confirm('Очистить историю сообщений на этом устройстве?')) {
+                localStorage.removeItem('nexus_history');
+                chatBox.innerHTML = '';
+                currentHistory = [];
+                addMessageToUI("Привет! Я Nexus. Чем могу помочь?", "ai", null, true);
+            }
+        }
+
         window.onload = () => {
             const savedTheme = localStorage.getItem('nexus_theme');
-            if (savedTheme) {
-                applyTheme(savedTheme);
-            } else {
-                const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-                applyTheme(prefersLight ? 'light' : 'dark');
-            }
+            if (savedTheme) applyTheme(savedTheme);
+            else applyTheme(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
 
             const savedHistory = localStorage.getItem('nexus_history');
             if (savedHistory) {
-                JSON.parse(savedHistory).forEach(msg => addMessageToUI(msg.text, msg.sender, msg.time, false));
+                currentHistory = JSON.parse(savedHistory);
+                currentHistory.forEach(msg => addMessageToUI(msg.text, msg.sender, msg.time, false));
             } else {
                 addMessageToUI("Привет! Я Nexus. Чем могу помочь?", "ai", null, true);
             }
+
+            refreshStatus();
         };
 
         userInput.addEventListener('keydown', (e) => {
@@ -429,40 +777,121 @@
         async function sendMessage() {
             const text = userInput.value.trim();
             if (!text) return;
+            
+            const webSearchEnabled = document.getElementById('web-search-toggle').checked;
 
             addMessageToUI(text, 'user', null, true);
             userInput.value = '';
-            userInput.style.height = '40px';
-
+            userInput.style.height = '46px';
+            
             setGeneratingState(true);
-
-            const thinkingId = 'think-' + Date.now();
-            addThinking(thinkingId);
+            
+            const aiWrapper = document.createElement('div');
+            aiWrapper.className = 'message-wrapper ai';
+            const aiAvatar = document.createElement('div');
+            aiAvatar.className = 'avatar ai';
+            aiAvatar.innerHTML = `<img src="./photo/logo-nexus.png" alt="Nexus">`;
+            const aiMessageDiv = document.createElement('div');
+            aiMessageDiv.className = 'message ai';
+            
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'thinking';
+            thinkingDiv.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+            aiMessageDiv.appendChild(thinkingDiv);
+            
+            aiWrapper.appendChild(aiAvatar);
+            aiWrapper.appendChild(aiMessageDiv);
+            chatBox.appendChild(aiWrapper);
+            chatBox.scrollTop = chatBox.scrollHeight;
 
             currentController = new AbortController();
-
+            let fullText = "";
+            const startTime = performance.now();
+            
             try {
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text }),
+                    body: JSON.stringify({ 
+                        message: text,
+                        web_search: webSearchEnabled
+                    }),
                     signal: currentController.signal
                 });
 
-                const data = await res.json();
-                document.getElementById(thinkingId).remove();
+                if (!res.ok) throw new Error("Ошибка сервера");
 
-                if (!res.ok) {
-                    addMessageToUI('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'ai', null, true);
-                } else {
-                    addMessageToUI(data.response, 'ai', data.time, true);
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') break;
+                            if (data.startsWith('[ERROR]')) {
+                                fullText += data;
+                                break;
+                            }
+                            fullText += data;
+                            
+                            if (thinkingDiv.parentNode) thinkingDiv.remove();
+                            aiMessageDiv.innerHTML = marked.parse(fullText);
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
+                    }
                 }
+                
+                if (thinkingDiv.parentNode) thinkingDiv.remove();
+                aiMessageDiv.innerHTML = marked.parse(fullText);
+                
+                const endTime = performance.now();
+                const duration = (endTime - startTime) / 1000;
+                
+                if (fullText.trim().length > 0) {
+                    const timeSpan = document.createElement('span');
+                    timeSpan.className = 'generation-time';
+                    timeSpan.innerText = `Сгенерировано за ${duration.toFixed(1)} сек`;
+                    aiMessageDiv.appendChild(timeSpan);
+                }
+                
+                const preBlocks = aiMessageDiv.querySelectorAll('pre');
+                preBlocks.forEach(pre => {
+                    const code = pre.querySelector('code');
+                    if (code) {
+                        const wrapperDiv = document.createElement('div');
+                        wrapperDiv.className = 'code-wrapper';
+                        pre.parentNode.insertBefore(wrapperDiv, pre);
+                        wrapperDiv.appendChild(pre);
+                        
+                        const copyBtn = document.createElement('button');
+                        copyBtn.className = 'copy-code-btn';
+                        copyBtn.innerText = 'Копировать';
+                        copyBtn.onclick = () => {
+                            navigator.clipboard.writeText(code.innerText);
+                            copyBtn.innerText = 'Скопировано!';
+                            setTimeout(() => copyBtn.innerText = 'Копировать', 2000);
+                        };
+                        wrapperDiv.appendChild(copyBtn);
+                    }
+                });
+
+                saveMessageToLocalHistory(text, 'user', null);
+                saveMessageToLocalHistory(fullText, 'ai', null);
+                refreshStatus();
+
             } catch (e) {
-                document.getElementById(thinkingId).remove();
+                if (thinkingDiv.parentNode) thinkingDiv.remove();
                 if (e.name === 'AbortError') {
-                    addMessageToUI('Генерация остановлена пользователем.', 'ai', null, true);
+                    aiMessageDiv.innerHTML += `<br><span style="color:var(--text-muted); font-size:12px;">[Генерация остановлена]</span>`;
                 } else {
-                    addMessageToUI('Сетевая ошибка: ' + e.message, 'ai', null, true);
+                    aiMessageDiv.innerHTML = `<span style="color:var(--danger-color);">Ошибка: ${e.message}</span>`;
                 }
             } finally {
                 setGeneratingState(false);
@@ -481,21 +910,24 @@
                 sendBtn.classList.remove('stop-mode');
             }
         }
-
+        
         function addMessageToUI(text, sender, time, saveToHistory) {
             const wrapper = document.createElement('div');
             wrapper.className = 'message-wrapper ' + sender;
-
+            
             const avatar = document.createElement('div');
             avatar.className = 'avatar ' + sender;
-            avatar.innerHTML = sender === 'user' ? svgUser : svgAI;
-
+            if (sender === 'user') {
+                avatar.innerHTML = svgUser;
+            } else {
+                avatar.innerHTML = `<img src="./photo/logo-nexus.png" alt="Nexus">`;
+            }
+            
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message ' + sender;
-
+            
             if (sender === 'ai') {
                 messageDiv.innerHTML = marked.parse(text);
-
                 const preBlocks = messageDiv.querySelectorAll('pre');
                 preBlocks.forEach(pre => {
                     const code = pre.querySelector('code');
@@ -504,7 +936,7 @@
                         wrapperDiv.className = 'code-wrapper';
                         pre.parentNode.insertBefore(wrapperDiv, pre);
                         wrapperDiv.appendChild(pre);
-
+                        
                         const copyBtn = document.createElement('button');
                         copyBtn.className = 'copy-code-btn';
                         copyBtn.innerText = 'Копировать';
@@ -516,66 +948,80 @@
                         wrapperDiv.appendChild(copyBtn);
                     }
                 });
-
-                if (time) {
-                    const timeSpan = document.createElement('span');
-                    timeSpan.className = 'generation-time';
-                    timeSpan.innerText = `Сгенерировано за ${time} сек.`;
-                    messageDiv.appendChild(timeSpan);
-                }
             } else {
                 messageDiv.innerText = text;
             }
-
+            
             wrapper.appendChild(avatar);
             wrapper.appendChild(messageDiv);
             chatBox.appendChild(wrapper);
             chatBox.scrollTop = chatBox.scrollHeight;
 
             if (saveToHistory) {
-                saveMessageToLocalStorage(text, sender, time);
+                saveMessageToLocalHistory(text, sender, time);
             }
         }
 
-        function addThinking(id) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'message-wrapper ai';
-            wrapper.id = id;
-
-            const avatar = document.createElement('div');
-            avatar.className = 'avatar ai';
-            avatar.innerHTML = svgAI;
-
-            const thinkingDiv = document.createElement('div');
-            thinkingDiv.className = 'message ai thinking';
-            thinkingDiv.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-
-            wrapper.appendChild(avatar);
-            wrapper.appendChild(thinkingDiv);
-            chatBox.appendChild(wrapper);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        function saveMessageToLocalStorage(text, sender, time) {
+        function saveMessageToLocalHistory(text, sender, time) {
             let history = JSON.parse(localStorage.getItem('nexus_history')) || [];
             history.push({ text, sender, time });
             localStorage.setItem('nexus_history', JSON.stringify(history));
-        }
-
-        function clearChat() {
-            if (confirm('Очистить историю сообщений?')) {
-                localStorage.removeItem('nexus_history');
-                chatBox.innerHTML = '';
-                addMessageToUI("Привет! Я Nexus. Чем могу помочь?", "ai", null, true);
-            }
+            currentHistory = history;
+            updateTokenCounter();
         }
 
         async function shutdown() {
             if (confirm('Вы уверены, что хотите выключить Nexus?')) {
                 await fetch('/shutdown', { method: 'POST' });
-                document.body.innerHTML = "<h2 style='color:var(--text-main); text-align:center; margin-top:20%; font-family:sans-serif;'>Nexus выключен. Процессы остановлены.</h2>";
+                document.body.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; height:100vh; width:100vw; color:var(--text-main); font-family:sans-serif; text-align:center;"><h2>Nexus выключен.<br>Процессы остановлены.</h2></div>`;
             }
         }
+
+        const chatContainer = document.getElementById('chat-container');
+        
+        chatContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropOverlay.classList.add('active');
+        });
+
+        chatContainer.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            if (e.relatedTarget && !chatContainer.contains(e.relatedTarget)) {
+                dropOverlay.classList.remove('active');
+            }
+        });
+
+        chatContainer.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropOverlay.classList.remove('active');
+            
+            if (e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+
+                addMessageToUI(`[Система]: Загрузка файла ${file.name} в базу знаний...`, 'ai', null, false);
+
+                try {
+                    const res = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (res.ok) {
+                        addMessageToUI(`[Система]: Файл ${file.name} успешно добавлен и проиндексирован.`, 'ai', null, false);
+                        refreshStatus();
+                    } else {
+                        addMessageToUI(`[Система]: Ошибка загрузки файла.`, 'ai', null, false);
+                    }
+                } catch (err) {
+                    addMessageToUI(`[Система]: Ошибка сети при загрузке.`, 'ai', null, false);
+                }
+            }
+        });
+        
+        window.addEventListener('beforeunload', (e) => {
+            navigator.sendBeacon('/shutdown');
+        });
     </script>
 </body>
 </html>

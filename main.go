@@ -24,8 +24,6 @@ func enableANSI() {
 
 	var mode uint32
 	_, _, _ = getConsoleMode.Call(uintptr(handle), uintptr(unsafe.Pointer(&mode)))
-
-	// ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 	mode |= 0x0004
 	_, _, _ = setConsoleMode.Call(uintptr(handle), uintptr(mode))
 }
@@ -51,12 +49,7 @@ func main() {
 		ensureTerminal()
 	}
 
-	ensureServices()
-
-	go startWebServer()
-	time.Sleep(1 * time.Second)
-	openBrowser("http://localhost:8081")
-
+	// 1. ИНИЦИАЛИЗИРУЕМ БД (это быстро, чтобы веб-сервер не упал)
 	var err error
 	db, err = initDB(filepath.Join(workDir, "data", "nexus_memory.db"))
 	if err != nil {
@@ -64,6 +57,15 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
+
+	// 2. ЗАПУСКАЕМ ВЕБ-СЕРВЕР И СРАЗУ ОТКРЫВАЕМ БРАУЗЕР
+	go startWebServer()
+	time.Sleep(300 * time.Millisecond)
+	openBrowser("http://localhost:8081")
+
+	// 3. ТЕПЕРЬ ГРУЗИМ ТЯЖЕЛОЕ В ФОНЕ
+	printSystem("Запускаю сервисы ИИ (это может занять время)...")
+	ensureServices()
 
 	printSystem("Загружаю память...")
 	totalItems := countMemoryItems(db)
