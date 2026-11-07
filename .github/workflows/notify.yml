@@ -12,36 +12,49 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract latest changelog
+      - name: Extract and Format Changelog
         run: |
-          # Берем текст от первого ## [v до следующего ## и убираем последнюю строчку
-          sed -n '/^## \[v/,/^## /p' docs/CHANGELOG.md | head -n -1 > raw_changelog.txt
+          # 1. Берем только текст между первым и вторым ## [v
+          awk '/^## \[v/{if (p) exit; p=1; next} p' docs/CHANGELOG.md > raw.txt
           
-          # Убираем технические символы markdown (** и ###), чтобы текст выглядел чисто
-          sed -i 's/\*\*//g; s/###/  - /g; s/##//g' raw_changelog.txt
+          # 2. Убираем обратные кавычки и звездочки
+          sed -i 's/`//g; s/\*\*//g' raw.txt
           
-          # Обрезаем текст до 3500 символов (чтобы точно влезло в Telegram)
-          head -c 3500 raw_changelog.txt > latest_changelog.txt
+          # 3. Красиво оформляем заголовки
+          sed -i 's/### Добавлено/📦 ДОБАВЛЕНО:/g' raw.txt
+          sed -i 's/### Изменено/🔄 ИЗМЕНЕНО:/g' raw.txt
+          sed -i 's/### Исправлено/🛠 ИСПРАВЛЕНО:/g' raw.txt
+          sed -i 's/### Оптимизировано/⚡ ОПТИМИЗИРОВАНО:/g' raw.txt
           
-          echo "--- ТЕКСТ, КОТОРЫЙ УЙДЕТ В МЕССЕНДЖЕРЫ ---"
+          # 4. Удаляем пустые строки
+          sed -i '/^$/d' raw.txt
+          
+          # 5. Обрезаем до 3000 символов
+          head -c 3000 raw.txt > latest_changelog.txt
+          
+          # 6. Экранируем HTML-теги для Telegram (чтобы не было ошибок парсинга)
+          sed 's/</\&lt;/g; s/>/\&gt;/g' latest_changelog.txt > latest_changelog_tg.txt
+
+          echo "--- ТЕКСТ ДЛЯ VK ---"
           cat latest_changelog.txt
-          echo "-------------------------------------------"
+          echo "--------------------"
 
       - name: Send to Telegram
         run: |
-          CHANGELOG=$(cat latest_changelog.txt)
-          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n📝 Что нового:\n%s\n\n👤 Автор: %s\n🔗 Репо: %s" "${{ github.ref_name }}" "$CHANGELOG" "${{ github.actor }}" "${{ github.repository }}")
+          CHANGELOG=$(cat latest_changelog_tg.txt)
+          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n👤 Author: <a href=\"https://github.com/${{ github.actor }}\">${{ github.actor }}</a>\n🔗 Repo: <a href=\"https://github.com/${{ github.repository }}\">${{ github.repository }}</a>" "${{ github.ref_name }}" "$CHANGELOG")
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d parse_mode="HTML" \
             --data-urlencode "text=$MESSAGE"
 
       - name: Send to VK wall
         run: |
           CHANGELOG=$(cat latest_changelog.txt)
-          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n📝 Что нового:\n%s\n\n👤 Автор: %s\n🔗 Репо: %s" "${{ github.ref_name }}" "$CHANGELOG" "${{ github.actor }}" "${{ github.repository }}")
+          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n👤 Author: https://github.com/${{ github.actor }}\n🔗 Repo: https://github.com/${{ github.repository }}" "${{ github.ref_name }}" "$CHANGELOG")
           curl -s -X POST "https://api.vk.com/method/wall.post" \
             -d access_token="${{ secrets.VK_ACCESS_TOKEN }}" \
             -d owner_id="${{ secrets.VK_GROUP_ID }}" \
-            --data-urlencode "message=$MESSAGE" \
             -d from_group=1 \
-            -d v=5.131
+            -d v=5.131 \
+            --data-urlencode "message=$MESSAGE"
