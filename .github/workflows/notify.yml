@@ -14,30 +14,30 @@ jobs:
 
       - name: Extract and Format Changelog
         run: |
-          # Ищем блок, который точно совпадает с текущим тегом
-          awk -v tag="${{ github.ref_name }}" 'index($0, "## ["tag"]") == 1 {if (p) exit; p=1; next} p' docs/CHANGELOG.md > raw.txt
+          # 1. Извлекаем блок (начинаем с текущего тега, останавливаемся на следующем ## [v)
+          awk -v tag="## [${{ github.ref_name }}]" '$0 ~ "^"tag { p=1; next } p && /^## \[v/ { exit } p' docs/CHANGELOG.md > raw.txt
           
-          # Убираем обратные кавычки и звездочки
+          # 2. Убираем обратные кавычки и звездочки
           sed -i 's/`//g; s/\*\*//g' raw.txt
           
-          # Красиво оформляем заголовки
-          sed -i 's/### Добавлено/📦 ДОБАВЛЕНО:/g' raw.txt
-          sed -i 's/### Изменено/🔄 ИЗМЕНЕНО:/g' raw.txt
-          sed -i 's/### Исправлено/🛠 ИСПРАВЛЕНО:/g' raw.txt
-          sed -i 's/### Оптимизировано/⚡ ОПТИМИЗИРОВАНО:/g' raw.txt
+          # 3. Красиво оформляем заголовки (добавляем перенос строки \n перед эмодзи)
+          sed -i 's/### Добавлено/\n📦 ДОБАВЛЕНО:/g' raw.txt
+          sed -i 's/### Изменено/\n🔄 ИЗМЕНЕНО:/g' raw.txt
+          sed -i 's/### Исправлено/\n🛠 ИСПРАВЛЕНО:/g' raw.txt
+          sed -i 's/### Оптимизировано/\n⚡ ОПТИМИЗИРОВАНО:/g' raw.txt
           
-          # Удаляем пустые строки
-          sed -i '/^$/d' raw.txt
+          # 4. Сжимаем множественные пустые строки в одну (используем cat -s)
+          cat -s raw.txt > latest_changelog.txt
           
-          # Обрезаем до 3000 символов (чтобы точно влезло в лимиты мессенджеров)
-          head -c 3000 raw.txt > latest_changelog.txt
+          # 5. Обрезаем до 3000 символов
+          head -c 3000 latest_changelog.txt > final_changelog.txt
           
-          # Экранируем HTML-теги для Telegram (чтобы не было ошибок парсинга)
-          sed 's/</\&lt;/g; s/>/\&gt;/g' latest_changelog.txt > latest_changelog_tg.txt
+          # 6. Экранируем HTML-теги для Telegram
+          sed 's/</\&lt;/g; s/>/\&gt;/g' final_changelog.txt > latest_changelog_tg.txt
 
-          echo "--- ТЕКСТ ДЛЯ VK ---"
-          cat latest_changelog.txt
-          echo "--------------------"
+          echo "--- ТЕКСТ ДЛЯ МЕССЕНДЖЕРОВ ---"
+          cat final_changelog.txt
+          echo "------------------------------"
 
       - name: Send to Telegram
         run: |
@@ -50,7 +50,7 @@ jobs:
 
       - name: Send to VK wall
         run: |
-          CHANGELOG=$(cat latest_changelog.txt)
+          CHANGELOG=$(cat final_changelog.txt)
           MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n👤 Author: https://github.com/${{ github.actor }}\n🔗 Repo: https://github.com/${{ github.repository }}" "${{ github.ref_name }}" "$CHANGELOG")
           curl -s -X POST "https://api.vk.com/method/wall.post" \
             -d access_token="${{ secrets.VK_ACCESS_TOKEN }}" \
