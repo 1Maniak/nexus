@@ -14,25 +14,25 @@ jobs:
 
       - name: Extract and Format Changelog
         run: |
-          # 1. Берем только текст между первым и вторым ## [v
-          awk '/^## \[v/{if (p) exit; p=1; next} p' docs/CHANGELOG.md > raw.txt
+          # Ищем блок, который точно совпадает с текущим тегом
+          awk -v tag="${{ github.ref_name }}" 'index($0, "## ["tag"]") == 1 {if (p) exit; p=1; next} p' docs/CHANGELOG.md > raw.txt
           
-          # 2. Убираем обратные кавычки и звездочки
+          # Убираем обратные кавычки и звездочки
           sed -i 's/`//g; s/\*\*//g' raw.txt
           
-          # 3. Красиво оформляем заголовки
+          # Красиво оформляем заголовки
           sed -i 's/### Добавлено/📦 ДОБАВЛЕНО:/g' raw.txt
           sed -i 's/### Изменено/🔄 ИЗМЕНЕНО:/g' raw.txt
           sed -i 's/### Исправлено/🛠 ИСПРАВЛЕНО:/g' raw.txt
           sed -i 's/### Оптимизировано/⚡ ОПТИМИЗИРОВАНО:/g' raw.txt
           
-          # 4. Удаляем пустые строки
+          # Удаляем пустые строки
           sed -i '/^$/d' raw.txt
           
-          # 5. Обрезаем до 3000 символов
+          # Обрезаем до 3000 символов (чтобы точно влезло в лимиты мессенджеров)
           head -c 3000 raw.txt > latest_changelog.txt
           
-          # 6. Экранируем HTML-теги для Telegram (чтобы не было ошибок парсинга)
+          # Экранируем HTML-теги для Telegram (чтобы не было ошибок парсинга)
           sed 's/</\&lt;/g; s/>/\&gt;/g' latest_changelog.txt > latest_changelog_tg.txt
 
           echo "--- ТЕКСТ ДЛЯ VK ---"
