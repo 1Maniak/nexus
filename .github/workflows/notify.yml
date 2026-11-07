@@ -14,29 +14,31 @@ jobs:
 
       - name: Extract latest changelog
         run: |
-          set -x
-          # Используем sed: берем от первого ## [v до второго ## [v, и убираем последнюю строку
-          sed -n '/^## \[v/,/^## \[v/p' docs/CHANGELOG.md | head -n -1 > latest_changelog.txt
-          echo "--- ЧТО МЫ ИЗВЛЕКЛИ ---"
+          # Берем текст от первого ## [v до следующего ## и убираем последнюю строчку
+          sed -n '/^## \[v/,/^## /p' docs/CHANGELOG.md | head -n -1 > raw_changelog.txt
+          
+          # Убираем технические символы markdown (** и ###), чтобы текст выглядел чисто
+          sed -i 's/\*\*//g; s/###/  - /g; s/##//g' raw_changelog.txt
+          
+          # Обрезаем текст до 3500 символов (чтобы точно влезло в Telegram)
+          head -c 3500 raw_changelog.txt > latest_changelog.txt
+          
+          echo "--- ТЕКСТ, КОТОРЫЙ УЙДЕТ В МЕССЕНДЖЕРЫ ---"
           cat latest_changelog.txt
-          echo "-----------------------"
+          echo "-------------------------------------------"
 
       - name: Send to Telegram
         run: |
-          set -x
           CHANGELOG=$(cat latest_changelog.txt)
-          MESSAGE=$(printf "Новый релиз Nexus!\n\nТег: %s\n\nЧто нового:\n%s\n\nАвтор: %s\nРепозиторий: %s" "${{ github.ref_name }}" "$CHANGELOG" "${{ github.actor }}" "${{ github.repository }}")
-          # Добавил вывод ответа от Telegram, чтобы увидеть ошибку, если она есть
+          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n📝 Что нового:\n%s\n\n👤 Автор: %s\n🔗 Репо: %s" "${{ github.ref_name }}" "$CHANGELOG" "${{ github.actor }}" "${{ github.repository }}")
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             --data-urlencode "text=$MESSAGE"
 
       - name: Send to VK wall
         run: |
-          set -x
           CHANGELOG=$(cat latest_changelog.txt)
-          MESSAGE=$(printf "Новый релиз Nexus!\n\nТег: %s\n\nЧто нового:\n%s\n\nАвтор: %s\nРепозиторий: %s" "${{ github.ref_name }}" "$CHANGELOG" "${{ github.actor }}" "${{ github.repository }}")
-          # Для VK добавил from_group=1 (обязательно для постов от имени группы)
+          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n📝 Что нового:\n%s\n\n👤 Автор: %s\n🔗 Репо: %s" "${{ github.ref_name }}" "$CHANGELOG" "${{ github.actor }}" "${{ github.repository }}")
           curl -s -X POST "https://api.vk.com/method/wall.post" \
             -d access_token="${{ secrets.VK_ACCESS_TOKEN }}" \
             -d owner_id="${{ secrets.VK_GROUP_ID }}" \
