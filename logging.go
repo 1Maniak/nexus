@@ -9,7 +9,6 @@ func printSystem(msg string) {
 }
 
 // НЕ НУЖНО!
-// Для отладочного мусора
 // func printDebug(msg string) {
 // 	if appMode == "dev" {
 // 		fmt.Println(string(colorGray) + "[DEBUG] " + msg + string(colorReset))

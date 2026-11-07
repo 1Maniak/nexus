@@ -34,7 +34,7 @@ func startServicesWindow() error {
 		return nil
 	}
 
-	// РЕЖИМ PROD (Скрытый запуск в фоне)
+	// РЕЖИМ PROD 
 	if appMode == "prod" {
 		if needOllama {
 			cmd := exec.Command("ollama", "serve")
@@ -49,7 +49,7 @@ func startServicesWindow() error {
 		return nil
 	}
 
-	// РЕЖИМ DEV (Открываем терминалы)
+	// РЕЖИМ DEV 
 	batPath := filepath.Join(workDir, "run_llama.bat")
 	batContent := fmt.Sprintf("@echo off\r\nchcp 65001 >nul\r\n\"%s\" -m \"%s\" --port 8080 -c 4096 -t 8 --no-mmap", llamaExe, llamaMod)
 	os.WriteFile(batPath, []byte(batContent), 0644)

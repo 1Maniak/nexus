@@ -10,7 +10,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// --- Постоянная векторная память ---
 type MemoryItem struct {
 	ID     string    `json:"id"`
 	Text   string    `json:"text"`
@@ -20,7 +19,6 @@ type MemoryItem struct {
 
 var db *sql.DB
 
-// --- Функции работы с SQLite ---
 func initDB(dbPath string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -153,7 +151,6 @@ func blobToVector(blob []byte) ([]float64, error) {
 	return vec, nil
 }
 
-// cosineSimilarity вычисляет косинусное сходство между двумя векторами.
 func cosineSimilarity(a, b []float64) float64 {
 	if len(a) == 0 || len(b) == 0 || len(a) != len(b) {
 		return 0.0
@@ -170,7 +167,6 @@ func cosineSimilarity(a, b []float64) float64 {
 	return dotProduct / (float64(normA) * float64(normB))
 }
 
-// searchByVector использует косинусное сходство между вектором запроса и векторами в памяти.
 func searchByVector(db *sql.DB, query string, topN int) ([]string, error) {
 	queryVec, err := getEmbedding(query)
 	if err != nil {
@@ -223,11 +219,6 @@ func searchByVector(db *sql.DB, query string, topN int) ([]string, error) {
 	}
 	return out, nil
 }
-
-// --- Функции памяти ---
-// func loadMemory() error {
-// 	return nil
-// }
 
 func addToMemory(text string, memType string) error {
 	vec, err := getEmbedding(text)

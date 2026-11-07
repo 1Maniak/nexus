@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-// --- Эмбеддинги через Ollama ---
+//  Эмбеддинги 
 func getEmbedding(text string) ([]float64, error) {
 	url := ollamaURL + "/api/embeddings"
 	payload := map[string]interface{}{
@@ -51,7 +51,7 @@ func getEmbedding(text string) ([]float64, error) {
 	return vec, nil
 }
 
-// --- Формирование запроса к LLM ---
+// Формирование запроса к LLM 
 func buildChatPayload(messages []map[string]string) map[string]interface{} {
 	return map[string]interface{}{
 		"model":             llmModel,
@@ -67,7 +67,7 @@ func buildChatPayload(messages []map[string]string) map[string]interface{} {
 	}
 }
 
-// --- Потоковый вывод ответа ---
+// Потоковый вывод ответа 
 func streamChatCompletion(url string, payload map[string]interface{}) (string, error) {
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -121,7 +121,7 @@ func streamChatCompletion(url string, payload map[string]interface{}) (string, e
 	return fullResponse, nil
 }
 
-// --- Сборка сообщений для запроса ---
+// Сборка сообщений для запроса 
 func buildRequestMessages(history []map[string]string, extraSystem, userInput string) []map[string]string {
 	request := make([]map[string]string, len(history))
 	copy(request, history)

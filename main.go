@@ -30,7 +30,6 @@ func enableANSI() {
 	_, _, _ = setConsoleMode.Call(uintptr(handle), uintptr(mode))
 }
 
-// --- Основной клиент ---
 func main() {
 	enableANSI()
 	setupCleanup()
@@ -52,7 +51,7 @@ func main() {
 		ensureTerminal()
 	}
 
-	ensureServices() // ВАЖНО: Запуск сервисов
+	ensureServices() 
 
 	go startWebServer()
 	time.Sleep(1 * time.Second)
@@ -88,7 +87,7 @@ func main() {
 	}
 	fmt.Println()
 
-	// === РЕЖИМ РАЗРАБОТЧИКА (Консольный чат) ===
+	// РЕЖИМ РАЗРАБОТЧИКА
 	if appMode == "dev" {
 		url := llamaURL
 		scanner := bufio.NewScanner(os.Stdin)
@@ -315,7 +314,7 @@ Nexus: Я Nexus — твой локальный AI-помощник.`
 			printError("Ошибка чтения ввода: " + err.Error())
 		}
 	} else {
-		// === РЕЖИМ PROD (Просто висим в фоне и ждем запросов от браузера) ===
+		// РЕЖИМ PROD
 		select {}
 	}
 

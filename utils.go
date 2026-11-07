@@ -2,7 +2,6 @@ package main
 
 import "time"
 
-// --- Получение текущего времени ---
 func getCurrentTime() string {
 	now := time.Now()
 	return now.Format("15:04:05 - 02.01.2006")

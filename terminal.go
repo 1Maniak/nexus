@@ -25,7 +25,6 @@ func relaunchInWindowsTerminal() {
 		cmdStr += " " + os.Args[1]
 	}
 
-	// -w -1 открывает НОВОЕ окно терминала
 	args := []string{"-w", "-1", "nt", "-p", "Command Prompt", "cmd", "/k", cmdStr}
 
 	cmd := exec.Command("wt", args...)

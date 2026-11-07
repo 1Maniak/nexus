@@ -11,7 +11,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-// --- Интернет-поиск через DuckDuckGo ---
+// Интернет-поиск через DuckDuckGo 
 func webSearch(query string) (string, error) {
 	query = strings.ReplaceAll(query, " ", "+")
 	url := "https://html.duckduckgo.com/html/?q=" + query
@@ -71,7 +71,7 @@ func webSearch(query string) (string, error) {
 	return strings.Join(results, "\n\n"), nil
 }
 
-// --- Извлечение числа из текста (для курсов, цен и т.п.) ---
+// Извлечение числа из текста 
 func extractNumber(text string) string {
 	re := regexp.MustCompile(`\d+[.,]\d+`)
 	matches := re.FindAllString(text, -1)

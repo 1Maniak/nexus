@@ -17,7 +17,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-// --- База знаний с инкрементальным обновлением ---
+// База знаний с инкрементальным обновлением 
 type FileState struct {
 	Path       string      `json:"path"`
 	Hash       string      `json:"hash"`
@@ -226,8 +226,6 @@ func loadKnowledgeFromFolder(folderPath string) error {
 	printSystem(fmt.Sprintf("Добавлено %d новых фрагментов, всего в памяти %d", addedCount, countMemoryItems(db)))
 	return nil
 }
-
-// --- Вспомогательные функции для чтения ---
 
 func readPDF(path string) (string, error) {
 	f, err := os.Open(path)
