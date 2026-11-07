@@ -14,23 +14,32 @@ jobs:
 
       - name: Extract latest changelog
         run: |
-          # Извлекаем первую запись о версии (от первого заголовка до второго)
-          awk '/^## \ [v/{if (p) exit; p=1; next} p' docs/CHANGELOG.md > latest_changelog.txt
+          set -x
+          # Используем sed: берем от первого ## [v до второго ## [v, и убираем последнюю строку
+          sed -n '/^## \[v/,/^## \[v/p' docs/CHANGELOG.md | head -n -1 > latest_changelog.txt
+          echo "--- ЧТО МЫ ИЗВЛЕКЛИ ---"
+          cat latest_changelog.txt
+          echo "-----------------------"
 
       - name: Send to Telegram
         run: |
+          set -x
           CHANGELOG=$(cat latest_changelog.txt)
           MESSAGE=$(printf "Новый релиз Nexus!\n\nТег: %s\n\nЧто нового:\n%s\n\nАвтор: %s\nРепозиторий: %s" "${{ github.ref_name }}" "$CHANGELOG" "${{ github.actor }}" "${{ github.repository }}")
+          # Добавил вывод ответа от Telegram, чтобы увидеть ошибку, если она есть
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             --data-urlencode "text=$MESSAGE"
 
       - name: Send to VK wall
         run: |
+          set -x
           CHANGELOG=$(cat latest_changelog.txt)
           MESSAGE=$(printf "Новый релиз Nexus!\n\nТег: %s\n\nЧто нового:\n%s\n\nАвтор: %s\nРепозиторий: %s" "${{ github.ref_name }}" "$CHANGELOG" "${{ github.actor }}" "${{ github.repository }}")
+          # Для VK добавил from_group=1 (обязательно для постов от имени группы)
           curl -s -X POST "https://api.vk.com/method/wall.post" \
             -d access_token="${{ secrets.VK_ACCESS_TOKEN }}" \
             -d owner_id="${{ secrets.VK_GROUP_ID }}" \
             --data-urlencode "message=$MESSAGE" \
+            -d from_group=1 \
             -d v=5.131
