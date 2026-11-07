@@ -1,10 +1,10 @@
 <div align="center">
 
-![Header](https://capsule-render.vercel.app/api?type=waving&color=0:1A1025,50:FF7300,100:00D2FF&height=230&section=header&text=Nexus&fontSize=70&fontColor=ffffff&desc=Local%20AI%20Agent&descAlignY=65&descSize=20)
+![Header](https://capsule-render.vercel.app/api?type=waving&color=0:0f0c29,50:302b63,100:ff00cc&height=250&section=header&text=Nexus&fontSize=75&fontColor=ffffff&fontAlignY=35&desc=Local%20AI%20Agent&descAlignY=55&descSize=22)
 
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v1.6.0-FF7300?style=for-the-badge)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.6.0-ff00cc?style=for-the-badge)](docs/CHANGELOG.md)
 
 **Локальный AI-агент с долговременной памятью, RAG-поиском и веб-интерфейсом.**
 **Работает полностью офлайн, без облачных зависимостей.**
@@ -182,6 +182,6 @@ MIT License. See [LICENSE](LICENSE).
 
 Этот проект распространяется под лицензией **MIT**. Вы можете свободно использовать, изменять и распространять код, при условии сохранения оригинального уведомления об авторских правах.
 
-[![Footer](https://capsule-render.vercel.app/api?type=waving&color=0:00D2FF,50:FF7300,100:1A1025&height=100&section=footer)](https://github.com/1Maniak)
+[![Footer](https://capsule-render.vercel.app/api?type=waving&color=0:ff00cc,50:302b63,100:0f0c29&height=100&section=footer)](https://github.com/1Maniak)
 
 </div>
