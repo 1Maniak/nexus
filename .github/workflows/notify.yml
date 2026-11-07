@@ -1,7 +1,7 @@
 name: Notify about new release
 
 on:
-  create:
+  push:
     tags:
       - 'v*'
 
@@ -14,7 +14,7 @@ jobs:
 
       - name: Extract latest changelog
         run: |
-          awk '/^## \[v/{if (p) exit; p=1; next} p' CHANGELOG.md > latest_changelog.txt
+          awk 'index($0, "##[v") == 1 {if (p) exit; p=1; next} p' docs/CHANGELOG.md > latest_changelog.txt
 
       - name: Send to Telegram
         run: |
