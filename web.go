@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type WebRequest struct {
@@ -35,7 +37,10 @@ func startWebServer() {
 			return
 		}
 
-		response, err := processWebMessage(req.Message)
+		startTime := time.Now()
+		response, err := processWebMessage(r.Context(), req.Message)
+		duration := time.Since(startTime).Seconds()
+
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -44,12 +49,16 @@ func startWebServer() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"response": response})
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"response": response,
+			"time":     fmt.Sprintf("%.1f", duration),
+		})
 	})
 
 	http.HandleFunc("/shutdown", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		go func() {
+			time.Sleep(500 * time.Millisecond)
 			cleanupProcesses()
 			os.Exit(0)
 		}()
@@ -63,7 +72,7 @@ func startWebServer() {
 	}
 }
 
-func processWebMessage(userInput string) (string, error) {
+func processWebMessage(ctx context.Context, userInput string) (string, error) {
 	var ragContext string
 	memories, err := searchMemory(userInput, 2)
 	if err == nil && len(memories) > 0 {
@@ -87,7 +96,13 @@ func processWebMessage(userInput string) (string, error) {
 		return "", err
 	}
 
-	resp, err := http.Post(llamaURL, "application/json", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "POST", llamaURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}

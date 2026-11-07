@@ -2,100 +2,578 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nexus AI</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
-        body { background-color: #1e1e1e; color: #d4d4d4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; height: 100vh; margin: 0; }
-        #chat-container { width: 800px; display: flex; flex-direction: column; background: #252526; border-radius: 8px; margin: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        
-        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .message { max-width: 80%; padding: 10px 15px; border-radius: 8px; line-height: 1.4; word-wrap: break-word; }
-        .user { background-color: #0e639c; color: white; align-self: flex-end; border-bottom-right-radius: 0; }
-        .ai { background-color: #333333; color: #d4d4d4; align-self: flex-start; border-bottom-left-radius: 0; }
-        
-        .thinking { display: flex; align-items: center; height: 24px; }
-        .dot { width: 6px; height: 6px; background-color: #888; border-radius: 50%; margin: 0 3px; animation: bounce 1.4s infinite ease-in-out both; }
+        :root {
+            --bg-body: #0d1117;
+            --bg-panel: #161b22;
+            --bg-message-ai: #21262d;
+            --bg-message-user: #1f6feb;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent-color: #58a6ff;
+            --danger-color: #da3633;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        body.light-theme {
+            --bg-body: #eef1f4;
+            --bg-panel: #fafbfc;
+            --bg-message-ai: #f1f4f7;
+            --bg-message-user: #2f6fca;
+            --border-color: #000000;
+            --text-main: #2d3339;
+            --text-muted: #656d76;
+            --accent-color: #2f6fca;
+            --danger-color: #c43434;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 0.25s, color 0.25s;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-panel);
+            margin: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: background-color 0.25s, border-color 0.25s, box-shadow 0.25s;
+        }
+
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.25s, border-color 0.25s;
+        }
+
+        #top-bar h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: color 0.25s;
+        }
+
+        .btn {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background-color: var(--border-color);
+        }
+
+        .btn-danger {
+            color: var(--danger-color);
+            border-color: rgba(196, 52, 52, 0.4);
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(196, 52, 52, 0.08);
+            border-color: var(--danger-color);
+        }
+
+        #theme-toggle {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-panel);
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            z-index: 1000;
+            transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+        }
+
+        #theme-toggle:hover {
+            background-color: var(--border-color);
+            transform: scale(1.05);
+        }
+
+        #theme-toggle svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        #chat-box {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .message-wrapper {
+            display: flex;
+            gap: 16px;
+            max-width: 85%;
+        }
+
+        .message-wrapper.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-wrapper.ai {
+            align-self: flex-start;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background-color: var(--bg-body);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            transition: background-color 0.25s, border-color 0.25s, color 0.25s;
+        }
+
+        .avatar svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .avatar.user {
+            background-color: var(--bg-message-user);
+            border-color: var(--bg-message-user);
+            color: #ffffff;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 6px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            font-size: 14px;
+            transition: background-color 0.25s, color 0.25s, border-color 0.25s;
+        }
+
+        .message.user {
+            background-color: var(--bg-message-user);
+            color: #ffffff;
+        }
+
+        .message.ai {
+            background-color: var(--bg-message-ai);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .code-wrapper {
+            position: relative;
+            margin: 12px 0;
+        }
+
+        .copy-code-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .copy-code-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .message pre {
+            background-color: var(--bg-body);
+            padding: 16px;
+            padding-top: 32px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            margin: 0;
+            transition: background-color 0.25s, border-color 0.25s;
+        }
+
+        .message code {
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 13px;
+        }
+
+        .message p {
+            margin: 0 0 12px 0;
+        }
+
+        .message p:last-child {
+            margin: 0;
+        }
+
+        .generation-time {
+            display: block;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            text-align: right;
+            transition: color 0.25s;
+        }
+
+        .thinking {
+            display: flex;
+            align-items: center;
+            height: 20px;
+            padding: 10px 16px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+            margin: 0 3px;
+            animation: bounce 1.4s infinite ease-in-out both;
+            transition: background-color 0.25s;
+        }
+
         .dot:nth-child(1) { animation-delay: -0.32s; }
         .dot:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
 
-        #input-area { display: flex; padding: 15px; background: #2d2d2d; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
-        input { flex: 1; padding: 12px; border: none; border-radius: 4px; background: #3c3c3c; color: white; outline: none; }
-        button { padding: 12px 20px; margin-left: 10px; background: #0e639c; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #1177bb; }
-        
-        .shutdown-btn { background-color: #d32f2f; padding: 8px 15px; font-size: 12px; }
-        .shutdown-btn:hover { background-color: #b71c1c; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        #input-area {
+            display: flex;
+            padding: 16px 20px;
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border-color);
+            gap: 12px;
+            transition: background-color 0.25s, border-color 0.25s;
+        }
+
+        textarea {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            outline: none;
+            resize: none;
+            font-family: inherit;
+            font-size: 14px;
+            height: 40px;
+            max-height: 200px;
+            overflow-y: hidden;
+            transition: border-color 0.2s, background-color 0.25s, color 0.25s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        .send-btn {
+            padding: 0 20px;
+            background-color: var(--bg-message-ai);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .send-btn:hover {
+            background-color: var(--border-color);
+        }
+
+        .send-btn.stop-mode {
+            background-color: rgba(196, 52, 52, 0.08);
+            color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-panel); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
     </style>
 </head>
 <body>
     <div id="chat-container">
-        <div style="text-align: right; padding: 10px 15px 0 0;">
-            <button class="shutdown-btn" onclick="shutdown()">Выключить Nexus</button>
+        <div id="top-bar">
+            <h1>Nexus AI</h1>
+            <div>
+                <button class="btn" onclick="clearChat()">Очистить</button>
+                <button class="btn btn-danger" onclick="shutdown()">Выключить</button>
+            </div>
         </div>
-        <div id="chat-box">
-            <div class="message ai">Привет! Я Nexus. Чем могу помочь?</div>
-        </div>
+
+        <div id="chat-box"></div>
+
         <div id="input-area">
-            <input type="text" id="user-input" placeholder="Напишите сообщение..." onkeypress="if(event.key === 'Enter') sendMessage()">
-            <button onclick="sendMessage()">Отправить</button>
+            <textarea id="user-input" placeholder="Напишите сообщение..." rows="1" oninput="this.style.height = '40px'; this.style.height = this.scrollHeight + 'px'"></textarea>
+            <button class="send-btn" id="send-btn" onclick="handleSendOrStop()">Отправить</button>
         </div>
     </div>
+
+    <button id="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему"></button>
+
     <script>
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        let currentController = null;
+        let isGenerating = false;
+
+        const svgUser = `<svg viewBox="0 0 16 16"><path d="M10.561 8.073a6.005 6.005 0 0 1 3.432 5.142.75.75 0 1 1-1.498.07 4.5 4.5 0 0 0-8.99 0 .75.75 0 0 1-1.498-.07 6.004 6.004 0 0 1 3.431-5.142 3.999 3.999 0 1 1 5.123 0ZM10.5 5a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"></path></svg>`;
+        const svgAI = `<svg viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM1.5 8a6.5 6.5 0 1 1 13 0 6.5 6.5 0 0 1-13 0Zm4.25-1.75h4.5v3.5h-4.5v-3.5Z"></path></svg>`;
+        const svgSun = `<svg viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12Zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM11 1h2v3h-2V1Zm0 19h2v3h-2v-3ZM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93ZM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121ZM19.071 3.515l1.414 1.414L18.364 7.05l-1.414-1.414 2.121-2.121ZM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121ZM23 11v2h-3v-2h3ZM4 11v2H1v-2h3Z"></path></svg>`;
+        const svgMoon = `<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1Z"></path></svg>`;
+
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                document.body.classList.add('light-theme');
+                themeToggle.innerHTML = svgMoon;
+                themeToggle.setAttribute('aria-label', 'Включить тёмную тему');
+            } else {
+                document.body.classList.remove('light-theme');
+                themeToggle.innerHTML = svgSun;
+                themeToggle.setAttribute('aria-label', 'Включить светлую тему');
+            }
+            localStorage.setItem('nexus_theme', theme);
+        }
+
+        function toggleTheme() {
+            const current = localStorage.getItem('nexus_theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        }
+
+        window.onload = () => {
+            const savedTheme = localStorage.getItem('nexus_theme');
+            if (savedTheme) {
+                applyTheme(savedTheme);
+            } else {
+                const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+                applyTheme(prefersLight ? 'light' : 'dark');
+            }
+
+            const savedHistory = localStorage.getItem('nexus_history');
+            if (savedHistory) {
+                JSON.parse(savedHistory).forEach(msg => addMessageToUI(msg.text, msg.sender, msg.time, false));
+            } else {
+                addMessageToUI("Привет! Я Nexus. Чем могу помочь?", "ai", null, true);
+            }
+        };
+
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!isGenerating) handleSendOrStop();
+            }
+        });
+
+        function handleSendOrStop() {
+            if (isGenerating) {
+                if (currentController) currentController.abort();
+            } else {
+                sendMessage();
+            }
+        }
+
         async function sendMessage() {
-            const input = document.getElementById('user-input');
-            const text = input.value.trim();
+            const text = userInput.value.trim();
             if (!text) return;
-            
-            addMessage(text, 'user');
-            input.value = '';
-            
+
+            addMessageToUI(text, 'user', null, true);
+            userInput.value = '';
+            userInput.style.height = '40px';
+
+            setGeneratingState(true);
+
             const thinkingId = 'think-' + Date.now();
             addThinking(thinkingId);
-            
+
+            currentController = new AbortController();
+
             try {
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
+                    body: JSON.stringify({ message: text }),
+                    signal: currentController.signal
                 });
-                
+
                 const data = await res.json();
                 document.getElementById(thinkingId).remove();
-                
+
                 if (!res.ok) {
-                    addMessage('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'ai');
+                    addMessageToUI('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'ai', null, true);
                 } else {
-                    addMessage(data.response, 'ai');
+                    addMessageToUI(data.response, 'ai', data.time, true);
                 }
             } catch (e) {
                 document.getElementById(thinkingId).remove();
-                addMessage('Сетевая ошибка: ' + e.message, 'ai');
+                if (e.name === 'AbortError') {
+                    addMessageToUI('Генерация остановлена пользователем.', 'ai', null, true);
+                } else {
+                    addMessageToUI('Сетевая ошибка: ' + e.message, 'ai', null, true);
+                }
+            } finally {
+                setGeneratingState(false);
+                currentController = null;
+                userInput.focus();
             }
         }
-        
-        function addMessage(text, sender) {
-            const box = document.getElementById('chat-box');
-            const div = document.createElement('div');
-            div.className = 'message ' + sender;
-            div.innerText = text;
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
+
+        function setGeneratingState(generating) {
+            isGenerating = generating;
+            if (generating) {
+                sendBtn.innerText = 'Стоп';
+                sendBtn.classList.add('stop-mode');
+            } else {
+                sendBtn.innerText = 'Отправить';
+                sendBtn.classList.remove('stop-mode');
+            }
+        }
+
+        function addMessageToUI(text, sender, time, saveToHistory) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper ' + sender;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar ' + sender;
+            avatar.innerHTML = sender === 'user' ? svgUser : svgAI;
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + sender;
+
+            if (sender === 'ai') {
+                messageDiv.innerHTML = marked.parse(text);
+
+                const preBlocks = messageDiv.querySelectorAll('pre');
+                preBlocks.forEach(pre => {
+                    const code = pre.querySelector('code');
+                    if (code) {
+                        const wrapperDiv = document.createElement('div');
+                        wrapperDiv.className = 'code-wrapper';
+                        pre.parentNode.insertBefore(wrapperDiv, pre);
+                        wrapperDiv.appendChild(pre);
+
+                        const copyBtn = document.createElement('button');
+                        copyBtn.className = 'copy-code-btn';
+                        copyBtn.innerText = 'Копировать';
+                        copyBtn.onclick = () => {
+                            navigator.clipboard.writeText(code.innerText);
+                            copyBtn.innerText = 'Скопировано!';
+                            setTimeout(() => copyBtn.innerText = 'Копировать', 2000);
+                        };
+                        wrapperDiv.appendChild(copyBtn);
+                    }
+                });
+
+                if (time) {
+                    const timeSpan = document.createElement('span');
+                    timeSpan.className = 'generation-time';
+                    timeSpan.innerText = `Сгенерировано за ${time} сек.`;
+                    messageDiv.appendChild(timeSpan);
+                }
+            } else {
+                messageDiv.innerText = text;
+            }
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(messageDiv);
+            chatBox.appendChild(wrapper);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            if (saveToHistory) {
+                saveMessageToLocalStorage(text, sender, time);
+            }
         }
 
         function addThinking(id) {
-            const box = document.getElementById('chat-box');
-            const div = document.createElement('div');
-            div.className = 'message ai thinking';
-            div.id = id;
-            div.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper ai';
+            wrapper.id = id;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar ai';
+            avatar.innerHTML = svgAI;
+
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'message ai thinking';
+            thinkingDiv.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(thinkingDiv);
+            chatBox.appendChild(wrapper);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function saveMessageToLocalStorage(text, sender, time) {
+            let history = JSON.parse(localStorage.getItem('nexus_history')) || [];
+            history.push({ text, sender, time });
+            localStorage.setItem('nexus_history', JSON.stringify(history));
+        }
+
+        function clearChat() {
+            if (confirm('Очистить историю сообщений?')) {
+                localStorage.removeItem('nexus_history');
+                chatBox.innerHTML = '';
+                addMessageToUI("Привет! Я Nexus. Чем могу помочь?", "ai", null, true);
+            }
         }
 
         async function shutdown() {
-            if (confirm('Вы уверены, что хотите полностью выключить Nexus?')) {
+            if (confirm('Вы уверены, что хотите выключить Nexus?')) {
                 await fetch('/shutdown', { method: 'POST' });
-                document.body.innerHTML = "<h2 style='color:white; text-align:center; margin-top:20%'>Nexus выключен. Все процессы остановлены. Можете закрыть вкладку.</h2>";
+                document.body.innerHTML = "<h2 style='color:var(--text-main); text-align:center; margin-top:20%; font-family:sans-serif;'>Nexus выключен. Процессы остановлены.</h2>";
             }
         }
     </script>
