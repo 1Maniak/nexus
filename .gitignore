@@ -1,8 +1,24 @@
+# Исполняемые файлы
 nexus.exe
-nexus.exe~
+nexus-dev.exe
 *.exe
+
+# Сгенерированные файлы
+run_llama.bat
+config.json
+
+# Локальная база данных и память
+data/
+!data/.gitkeep
+
+# Папка с бинарниками и моделями llama.cpp (она слишком большая для Git)
+llama.cpp/
+
+# Системный мусор
 desktop.ini
-data/*.db
-data/*.db-shm
-data/*.db-wal
-data/knowledge_state.json
+.DS_Store
+Thumbs.db
+
+# Настройки редакторов
+.vscode/
+.idea/

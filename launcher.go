@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"syscall"
 	"time"
 )
 
-// checkPort проверяет, слушается ли порт
 func checkPort(host string, port int) bool {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	conn, err := net.DialTimeout("tcp", addr, 500*time.Millisecond)
@@ -18,13 +20,13 @@ func checkPort(host string, port int) bool {
 	return true
 }
 
-// startServicesWindow открывает ОДНО окно wt с двумя вкладками:
-// вкладка 1 - Ollama, вкладка 2 - llama-server
 func startServicesWindow() error {
-	llamaCmd := fmt.Sprintf(`"%s" -m "%s" --port 8080 -c 4096 -t 8 --no-mmap`,
-		llamaServer, llamaModel)
+	exePath, _ := os.Executable()
+	workDir := filepath.Dir(exePath)
 
-	// Проверяем, что нужно запустить
+	llamaExe, _ := filepath.Abs(filepath.Join(workDir, AppConfig.LlamaServerPath))
+	llamaMod, _ := filepath.Abs(filepath.Join(workDir, AppConfig.LlamaModelPath))
+
 	needOllama := !checkPort("localhost", 11434)
 	needLlama := !checkPort("localhost", 8080)
 
@@ -32,21 +34,39 @@ func startServicesWindow() error {
 		return nil
 	}
 
-	// Собираем аргументы для wt
-	var args []string
-	args = append(args, "nt", "-p", "Command Prompt")
+	// РЕЖИМ PROD (Скрытый запуск в фоне)
+	if appMode == "prod" {
+		if needOllama {
+			cmd := exec.Command("ollama", "serve")
+			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			cmd.Start()
+		}
+		if needLlama {
+			cmd := exec.Command(llamaExe, "-m", llamaMod, "--port", "8080", "-c", "4096", "-t", "8", "--no-mmap")
+			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			cmd.Start()
+		}
+		return nil
+	}
 
-	// Первая вкладка
+	// РЕЖИМ DEV (Открываем терминалы)
+	batPath := filepath.Join(workDir, "run_llama.bat")
+	batContent := fmt.Sprintf("@echo off\r\nchcp 65001 >nul\r\n\"%s\" -m \"%s\" --port 8080 -c 4096 -t 8 --no-mmap", llamaExe, llamaMod)
+	os.WriteFile(batPath, []byte(batContent), 0644)
+
+	var args []string
+	args = append(args, "-w", "-1", "nt", "-p", "Command Prompt", "-d", workDir)
+
 	if needOllama {
 		args = append(args, "cmd", "/k", "ollama serve")
 	} else {
 		args = append(args, "cmd", "/k", "echo Ollama already running")
 	}
 
-	// Вторая вкладка
-	args = append(args, ";", "new-tab", "-p", "Command Prompt")
+	args = append(args, ";", "new-tab", "-p", "Command Prompt", "-d", workDir)
+
 	if needLlama {
-		args = append(args, "cmd", "/k", llamaCmd)
+		args = append(args, "cmd", "/k", "run_llama.bat")
 	} else {
 		args = append(args, "cmd", "/k", "echo llama-server already running")
 	}
@@ -55,9 +75,7 @@ func startServicesWindow() error {
 	return cmd.Start()
 }
 
-// ensureServices запускает сервисы, если они не запущены
 func ensureServices() {
-	// Проверяем, нужно ли что-то запускать
 	needOllama := !checkPort("localhost", 11434)
 	needLlama := !checkPort("localhost", 8080)
 
@@ -66,13 +84,12 @@ func ensureServices() {
 		return
 	}
 
-	printSystem("Запускаю сервисы в отдельном окне...")
+	printSystem("Запускаю сервисы...")
 	if err := startServicesWindow(); err != nil {
-		printError("Не удалось открыть окно сервисов: " + err.Error())
+		printError("Не удалось запустить сервисы: " + err.Error())
 		return
 	}
 
-	// Ждём Ollama
 	if needOllama {
 		for i := 0; i < 20; i++ {
 			time.Sleep(500 * time.Millisecond)
@@ -83,9 +100,8 @@ func ensureServices() {
 		}
 	}
 
-	// Ждём llama-server (дольше, модель грузится)
 	if needLlama {
-		printSystem("Ожидаю загрузки llama-server (это может занять 10-30 секунд)...")
+		printSystem("Ожидаю загрузки llama-server...")
 		for i := 0; i < 60; i++ {
 			time.Sleep(1 * time.Second)
 			if checkPort("localhost", 8080) {

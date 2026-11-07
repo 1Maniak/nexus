@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Nexus AI</title>
+    <style>
+        body { background-color: #1e1e1e; color: #d4d4d4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; height: 100vh; margin: 0; }
+        #chat-container { width: 800px; display: flex; flex-direction: column; background: #252526; border-radius: 8px; margin: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        
+        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 80%; padding: 10px 15px; border-radius: 8px; line-height: 1.4; word-wrap: break-word; }
+        .user { background-color: #0e639c; color: white; align-self: flex-end; border-bottom-right-radius: 0; }
+        .ai { background-color: #333333; color: #d4d4d4; align-self: flex-start; border-bottom-left-radius: 0; }
+        
+        .thinking { display: flex; align-items: center; height: 24px; }
+        .dot { width: 6px; height: 6px; background-color: #888; border-radius: 50%; margin: 0 3px; animation: bounce 1.4s infinite ease-in-out both; }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+        #input-area { display: flex; padding: 15px; background: #2d2d2d; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+        input { flex: 1; padding: 12px; border: none; border-radius: 4px; background: #3c3c3c; color: white; outline: none; }
+        button { padding: 12px 20px; margin-left: 10px; background: #0e639c; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #1177bb; }
+        
+        .shutdown-btn { background-color: #d32f2f; padding: 8px 15px; font-size: 12px; }
+        .shutdown-btn:hover { background-color: #b71c1c; }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div style="text-align: right; padding: 10px 15px 0 0;">
+            <button class="shutdown-btn" onclick="shutdown()">Выключить Nexus</button>
+        </div>
+        <div id="chat-box">
+            <div class="message ai">Привет! Я Nexus. Чем могу помочь?</div>
+        </div>
+        <div id="input-area">
+            <input type="text" id="user-input" placeholder="Напишите сообщение..." onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button onclick="sendMessage()">Отправить</button>
+        </div>
+    </div>
+    <script>
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            addMessage(text, 'user');
+            input.value = '';
+            
+            const thinkingId = 'think-' + Date.now();
+            addThinking(thinkingId);
+            
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                
+                const data = await res.json();
+                document.getElementById(thinkingId).remove();
+                
+                if (!res.ok) {
+                    addMessage('Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'ai');
+                } else {
+                    addMessage(data.response, 'ai');
+                }
+            } catch (e) {
+                document.getElementById(thinkingId).remove();
+                addMessage('Сетевая ошибка: ' + e.message, 'ai');
+            }
+        }
+        
+        function addMessage(text, sender) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = 'message ' + sender;
+            div.innerText = text;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function addThinking(id) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = 'message ai thinking';
+            div.id = id;
+            div.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function shutdown() {
+            if (confirm('Вы уверены, что хотите полностью выключить Nexus?')) {
+                await fetch('/shutdown', { method: 'POST' });
+                document.body.innerHTML = "<h2 style='color:white; text-align:center; margin-top:20%'>Nexus выключен. Все процессы остановлены. Можете закрыть вкладку.</h2>";
+            }
+        }
+    </script>
+</body>
+</html>

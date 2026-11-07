@@ -29,7 +29,7 @@ type KnowledgeState struct {
 	Files map[string]FileState `json:"files"`
 }
 
-const stateFile = "data/knowledge_state.json"
+var stateFile = "data/knowledge_state.json"
 
 func loadKnowledgeState() (*KnowledgeState, error) {
 	data, err := os.ReadFile(stateFile)

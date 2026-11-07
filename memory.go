@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -74,38 +73,38 @@ func addMemoryItem(db *sql.DB, item MemoryItem) error {
 	return nil
 }
 
-func searchMemorySQLite(db *sql.DB, query string, topN int) ([]string, error) {
-	words := strings.Fields(query)
-	if len(words) == 0 {
-		return []string{}, nil
-	}
-	matchQuery := strings.Join(words, " ")
+// func searchMemorySQLite(db *sql.DB, query string, topN int) ([]string, error) {
+// 	words := strings.Fields(query)
+// 	if len(words) == 0 {
+// 		return []string{}, nil
+// 	}
+// 	matchQuery := strings.Join(words, " ")
 
-	rows, err := db.Query(`
-		SELECT m.text FROM memory m
-		JOIN memory_fts fts ON m.rowid = fts.rowid
-		WHERE memory_fts MATCH ?
-		ORDER BY rank
-		LIMIT ?`, matchQuery, topN)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка поиска: %w", err)
-	}
-	defer rows.Close()
+// 	rows, err := db.Query(`
+// 		SELECT m.text FROM memory m
+// 		JOIN memory_fts fts ON m.rowid = fts.rowid
+// 		WHERE memory_fts MATCH ?
+// 		ORDER BY rank
+// 		LIMIT ?`, matchQuery, topN)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("ошибка поиска: %w", err)
+// 	}
+// 	defer rows.Close()
 
-	var results []string
-	for rows.Next() {
-		var text string
-		err := rows.Scan(&text)
-		if err != nil {
-			continue
-		}
-		results = append(results, text)
-	}
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("ошибка при итерации результатов: %w", err)
-	}
-	return results, nil
-}
+// 	var results []string
+// 	for rows.Next() {
+// 		var text string
+// 		err := rows.Scan(&text)
+// 		if err != nil {
+// 			continue
+// 		}
+// 		results = append(results, text)
+// 	}
+// 	if err = rows.Err(); err != nil {
+// 		return nil, fmt.Errorf("ошибка при итерации результатов: %w", err)
+// 	}
+// 	return results, nil
+// }
 
 func removeMemoryItem(db *sql.DB, id string) error {
 	_, err := db.Exec("DELETE FROM memory WHERE id = ?", id)
@@ -226,9 +225,9 @@ func searchByVector(db *sql.DB, query string, topN int) ([]string, error) {
 }
 
 // --- Функции памяти ---
-func loadMemory() error {
-	return nil
-}
+// func loadMemory() error {
+// 	return nil
+// }
 
 func addToMemory(text string, memType string) error {
 	vec, err := getEmbedding(text)
@@ -244,22 +243,22 @@ func addToMemory(text string, memType string) error {
 	return addMemoryItem(db, item)
 }
 
-func addToMemoryWithVector(text string, memType string, vec []float64) error {
-	item := MemoryItem{
-		ID:     fmt.Sprintf("mem_%d", time.Now().UnixNano()),
-		Text:   text,
-		Vector: vec,
-		Type:   memType,
-	}
-	return addMemoryItem(db, item)
-}
+// func addToMemoryWithVector(text string, memType string, vec []float64) error {
+// 	item := MemoryItem{
+// 		ID:     fmt.Sprintf("mem_%d", time.Now().UnixNano()),
+// 		Text:   text,
+// 		Vector: vec,
+// 		Type:   memType,
+// 	}
+// 	return addMemoryItem(db, item)
+// }
 
-func removeChunkByID(id string) {
-	err := removeMemoryItem(db, id)
-	if err != nil {
-		printError("Ошибка удаления записи " + id + ": " + err.Error())
-	}
-}
+// func removeChunkByID(id string) {
+// 	err := removeMemoryItem(db, id)
+// 	if err != nil {
+// 		printError("Ошибка удаления записи " + id + ": " + err.Error())
+// 	}
+// }
 
 func searchMemory(query string, topN int) ([]string, error) {
 	return searchByVector(db, query, topN)
