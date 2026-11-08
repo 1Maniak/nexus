@@ -3,7 +3,7 @@
 ![Header](https://capsule-render.vercel.app/api?type=waving&color=0:0f0c29,50:302b63,100:ff00cc&height=250&section=header&text=Nexus&fontSize=75&fontColor=ffffff&fontAlignY=35&desc=Local%20AI%20Agent&descAlignY=55&descSize=22)
 
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-BSL_1.1-orange?style=for-the-badge)](LICENSE)
 [![Version](https://img.shields.io/badge/version-v1.6.0-ff00cc?style=for-the-badge)](docs/CHANGELOG.md)
 
 **Локальный AI-агент с долговременной памятью, RAG-поиском и веб-интерфейсом.**
