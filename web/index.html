@@ -86,6 +86,7 @@
             font-weight: 900;
             letter-spacing: 2px;
             background: linear-gradient(to right, #818cf8, #c084fc, #f472b6);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -1015,7 +1016,7 @@
                     }
                 } catch (err) {
                     addMessageToUI(`[Система]: Ошибка сети при загрузке.`, 'ai', null, false);
-                }
+                    }
             }
         });
         
