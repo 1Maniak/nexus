@@ -1,3 +1,8 @@
+function toggleMenu() {
+    const nav = document.getElementById('mobileNav');
+    nav.classList.toggle('active');
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const container = document.getElementById('changelog-container');
     
