@@ -3,15 +3,12 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
-// Интернет-поиск через DuckDuckGo 
 func webSearch(query string) (string, error) {
 	query = strings.ReplaceAll(query, " ", "+")
 	url := "https://html.duckduckgo.com/html/?q=" + query
@@ -69,26 +66,4 @@ func webSearch(query string) (string, error) {
 
 	printSystem(fmt.Sprintf("Найдено %d результатов.", len(results)))
 	return strings.Join(results, "\n\n"), nil
-}
-
-// Извлечение числа из текста 
-func extractNumber(text string) string {
-	re := regexp.MustCompile(`\d+[.,]\d+`)
-	matches := re.FindAllString(text, -1)
-	for _, m := range matches {
-		s := strings.Replace(m, ",", ".", 1)
-		val, err := strconv.ParseFloat(s, 64)
-		if err == nil && val > 50 && val < 150 {
-			return m
-		}
-	}
-	reInt := regexp.MustCompile(`\d+`)
-	matchesInt := reInt.FindAllString(text, -1)
-	for _, m := range matchesInt {
-		val, err := strconv.Atoi(m)
-		if err == nil && val > 50 && val < 150 {
-			return m
-		}
-	}
-	return ""
 }

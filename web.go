@@ -11,7 +11,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
+)
+
+var (
+	keepAliveMu   sync.Mutex
+	shutdownTimer *time.Timer
 )
 
 type WebRequest struct {
@@ -105,19 +111,11 @@ func startWebServer() {
 	http.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		// ЗАЩИТА ОТ NIL БД
-		if db == nil {
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"memory_count":    0,
-				"knowledge_files": 0,
-				"model":           llmModel,
-				"context_window":  4096,
-				"online":          false,
-			})
-			return
+		memCount := 0
+		if db != nil {
+			memCount = countMemoryItems(db)
 		}
 
-		memCount := countMemoryItems(db)
 		kState, _ := loadKnowledgeState()
 		fileCount := 0
 		if kState != nil {
@@ -134,13 +132,59 @@ func startWebServer() {
 			resp.Body.Close()
 		}
 
+		modelName := filepath.Base(AppConfig.LlamaModelPath)
+		if modelName == "." || modelName == "" {
+			modelName = "Unknown"
+		}
+
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"memory_count":    memCount,
 			"knowledge_files": fileCount,
-			"model":           llmModel,
+			"model":           modelName,
 			"context_window":  4096,
 			"online":          serverOnline,
 		})
+	})
+
+	http.HandleFunc("/api/keepalive", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			return
+		}
+
+		keepAliveMu.Lock()
+		if shutdownTimer != nil {
+			shutdownTimer.Stop()
+			shutdownTimer = nil
+		}
+		keepAliveMu.Unlock()
+
+		fmt.Fprintf(w, "data: ping\n\n")
+		flusher.Flush()
+
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-r.Context().Done():
+				keepAliveMu.Lock()
+				shutdownTimer = time.AfterFunc(3*time.Second, func() {
+					printSystem("Соединение с браузером потеряно. Выключаю Nexus...")
+					cleanupProcesses()
+					os.Exit(0)
+				})
+				keepAliveMu.Unlock()
+				return
+			case <-ticker.C:
+				fmt.Fprintf(w, "data: ping\n\n")
+				flusher.Flush()
+			}
+		}
 	})
 
 	http.HandleFunc("/shutdown", func(w http.ResponseWriter, r *http.Request) {
@@ -170,27 +214,27 @@ func handleChatStream(ctx context.Context, w http.ResponseWriter, flusher http.F
 		}
 	}
 
-	var searchContext string
-	if req.WebSearch {
-		printSystem("Nexus ищет в интернете (Web UI)...")
-		result, err := webSearch(req.Message)
-		if err == nil {
-			searchContext = "Результаты поиска в интернете (используй их для ответа):\n" + result + "\n"
-		} else {
-			searchContext = "Ошибка поиска в интернете.\n"
-		}
-	}
+	sysPrompt := `Ты — Nexus, локальный ИИ. Отвечай на русском языке.
+ПРАВИЛА:
+1. Отвечай КРАТКО.
+2. Если используешь инструмент, пиши ТОЛЬКО команду.
+3. НЕ ВЫДУМЫВАЙ ошибки.
+4. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО переводить пути на английский язык. Копируй путь ТОЧНО так, как его написал пользователь, буква в букву. Если в пути есть кириллица, оставляй её.
 
-	sysPrompt := "Ты Nexus, локальный ИИ-помощник. Отвечай кратко, по делу, на русском языке."
-	finalPrompt := sysPrompt + "\n" + ragContext + "\n" + searchContext
+ИНСТРУМЕНТЫ:
+- Открыть файл/папку: [TOOL: open] путь (БЕЗ кавычек)
+- Прочитать файл: [TOOL: read] путь (БЕЗ кавычек)
+- Список файлов: [TOOL: list] путь (БЕЗ кавычек)
+- Поиск: [TOOL: search] запрос
+- Время: [TOOL: time]`
 
 	messages := []map[string]string{
-		{"role": "system", "content": finalPrompt},
+		{"role": "system", "content": sysPrompt + "\n" + ragContext},
 		{"role": "user", "content": req.Message},
 	}
 
 	payload := buildChatPayload(messages)
-	payload["stream"] = true
+	payload["stream"] = false
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -217,6 +261,56 @@ func handleChatStream(ctx context.Context, w http.ResponseWriter, flusher http.F
 		return
 	}
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		sendErrorStream(w, flusher, err.Error())
+		return
+	}
+
+	var result map[string]interface{}
+	json.Unmarshal(body, &result)
+
+	firstResponse := ""
+	if choices, ok := result["choices"].([]interface{}); ok && len(choices) > 0 {
+		if choice, ok := choices[0].(map[string]interface{}); ok {
+			if msg, ok := choice["message"].(map[string]interface{}); ok {
+				firstResponse, _ = msg["content"].(string)
+			}
+		}
+	}
+
+	toolName, toolResult := executeTool(firstResponse)
+
+	if toolName != "" {
+		fmt.Fprintf(w, "data: [LOG] Использую инструмент: %s\n\n", toolName)
+		flusher.Flush()
+
+		fmt.Fprintf(w, "data: \n\n")
+		flusher.Flush()
+
+		messages = append(messages, map[string]string{"role": "assistant", "content": firstResponse})
+		messages = append(messages, map[string]string{"role": "system", "content": toolResult})
+
+		payload = buildChatPayload(messages)
+		payload["stream"] = true
+		jsonData, _ = json.Marshal(payload)
+		httpReq, _ = http.NewRequestWithContext(ctx, "POST", llamaURL, bytes.NewBuffer(jsonData))
+		httpReq.Header.Set("Content-Type", "application/json")
+
+		resp, err = http.DefaultClient.Do(httpReq)
+		if err != nil {
+			sendErrorStream(w, flusher, "Ошибка при повторном запросе к LLM: "+err.Error())
+			return
+		}
+		defer resp.Body.Close()
+	} else {
+		fmt.Fprintf(w, "data: %s\n\n", firstResponse)
+		flusher.Flush()
+		fmt.Fprintf(w, "data: [DONE]\n\n")
+		flusher.Flush()
+		return
+	}
+
 	reader := bufio.NewReader(resp.Body)
 	var fullResponse strings.Builder
 
@@ -225,17 +319,14 @@ func handleChatStream(ctx context.Context, w http.ResponseWriter, flusher http.F
 		if err != nil {
 			break
 		}
-
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, "data: ") {
 			continue
 		}
-
 		data := strings.TrimPrefix(line, "data: ")
 		if data == "[DONE]" {
 			break
 		}
-
 		var chunk map[string]interface{}
 		if err := json.Unmarshal([]byte(data), &chunk); err == nil {
 			if choices, ok := chunk["choices"].([]interface{}); ok && len(choices) > 0 {

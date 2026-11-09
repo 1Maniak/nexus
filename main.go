@@ -49,7 +49,6 @@ func main() {
 		ensureTerminal()
 	}
 
-	// 1. ИНИЦИАЛИЗИРУЕМ БД (это быстро, чтобы веб-сервер не упал)
 	var err error
 	db, err = initDB(filepath.Join(workDir, "data", "nexus_memory.db"))
 	if err != nil {
@@ -58,12 +57,10 @@ func main() {
 	}
 	defer db.Close()
 
-	// 2. ЗАПУСКАЕМ ВЕБ-СЕРВЕР И СРАЗУ ОТКРЫВАЕМ БРАУЗЕР
 	go startWebServer()
 	time.Sleep(300 * time.Millisecond)
 	openBrowser("http://localhost:8081")
 
-	// 3. ТЕПЕРЬ ГРУЗИМ ТЯЖЕЛОЕ В ФОНЕ
 	printSystem("Запускаю сервисы ИИ (это может занять время)...")
 	ensureServices()
 
@@ -89,26 +86,23 @@ func main() {
 	}
 	fmt.Println()
 
-	// РЕЖИМ РАЗРАБОТЧИКА
 	if appMode == "dev" {
 		url := llamaURL
 		scanner := bufio.NewScanner(os.Stdin)
 
-		systemContent := `Ты — Nexus, локальный AI-помощник.
-Твой создатель и собеседник — Максим (обращайся к нему на "ты").
-Отвечай ТОЛЬКО на русском языке. Используй ТОЛЬКО кириллицу.
-НИКОГДА не используй китайские, японские иероглифы или английские слова без необходимости.
-
+		systemContent := `Ты — Nexus, локальный ИИ. Отвечай на русском языке.
 ПРАВИЛА:
-- Если тебя просят написать код, пиши его без лишних вступлений.
-- Не выдумывай факты. Если не знаешь — так и скажи.
-- Будь кратким.
-- Не предлагай свою помощь, если тебя не просили.
+1. Отвечай КРАТКО.
+2. Если используешь инструмент, пиши ТОЛЬКО команду.
+3. НЕ ВЫДУМЫВАЙ ошибки.
+4. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО переводить пути на английский язык. Копируй путь ТОЧНО так, как его написал пользователь, буква в букву. Если в пути есть кириллица, оставляй её.
 
-ФАКТЫ:
-- Ты — Nexus, программа на Go.
-- Ты умеешь искать в интернете, читать файлы и хранить память.
-- Максим — твой создатель.`
+ИНСТРУМЕНТЫ:
+- Открыть файл/папку: [TOOL: open] путь (БЕЗ кавычек)
+- Прочитать файл: [TOOL: read] путь (БЕЗ кавычек)
+- Список файлов: [TOOL: list] путь (БЕЗ кавычек)
+- Поиск: [TOOL: search] запрос
+- Время: [TOOL: time]`
 
 		messages := []map[string]string{
 			{"role": "system", "content": systemContent},
@@ -127,199 +121,55 @@ func main() {
 				break
 			}
 
-			handled := false
-			searchQuery := ""
-			lower := strings.ToLower(userInput)
-
-			if strings.Contains(lower, "время") || strings.Contains(lower, "часы") || strings.Contains(lower, "сколько времени") {
-				currentTime := getCurrentTime()
-				response := "Сейчас " + currentTime
-				fmt.Println("Nexus:", response)
-				recordTurn(&messages, userInput, response)
-				handled = true
-				continue
-			}
-
-			if strings.Contains(strings.ToLower(userInput), "прочитай") || strings.Contains(strings.ToLower(userInput), "открой") || strings.Contains(strings.ToLower(userInput), "покажи файл") {
-				parts := strings.Fields(userInput)
-				var filePath string
-				for i, part := range parts {
-					if strings.Contains(strings.ToLower(part), "файл") && i+1 < len(parts) {
-						filePath = strings.TrimSpace(parts[i+1])
-						break
-					}
-				}
-				if filePath == "" && len(parts) > 1 {
-					filePath = strings.TrimSpace(parts[len(parts)-1])
-				}
-				if filePath == "" {
-					fmt.Println("Nexus: Укажите путь к файлу.")
-					handled = true
-					continue
-				}
-
-				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					fmt.Println("Nexus: Файл не найден:", filePath)
-					handled = true
-					continue
-				}
-
-				data, err := os.ReadFile(filePath)
-				if err != nil {
-					printError("Ошибка чтения файла: " + err.Error())
-					handled = true
-					continue
-				}
-
-				content := string(data)
-				fmt.Println("Nexus: Содержимое файла " + filePath + ":\n" + content)
-				_ = addToMemory("Прочитан файл: "+filePath+"\n"+content, "knowledge")
-				handled = true
-				continue
-			}
-
-			if strings.Contains(strings.ToLower(userInput), "запиши") || strings.Contains(strings.ToLower(userInput), "сохрани") || strings.Contains(strings.ToLower(userInput), "перезапиши") {
-				parts := strings.SplitN(userInput, " ", 3)
-				var filePath, content string
-				if len(parts) >= 3 {
-					if strings.Contains(strings.ToLower(parts[1]), "файл") {
-						filePath = parts[2]
-						if len(parts) > 3 {
-							content = strings.Join(parts[3:], " ")
-						} else {
-							fmt.Println("Nexus: Укажите содержимое для записи.")
-							handled = true
-							continue
-						}
-					} else {
-						fmt.Println("Nexus: Используйте формат: 'запиши в файл путь_к_файлу содержимое'")
-						handled = true
-						continue
-					}
-				} else {
-					fmt.Println("Nexus: Используйте формат: 'запиши в файл путь_к_файлу содержимое'")
-					handled = true
-					continue
-				}
-
-				if filePath == "" {
-					fmt.Println("Nexus: Укажите путь к файлу.")
-					handled = true
-					continue
-				}
-				if content == "" {
-					fmt.Println("Nexus: Укажите содержимое для записи.")
-					handled = true
-					continue
-				}
-
-				err := os.WriteFile(filePath, []byte(content), 0644)
-				if err != nil {
-					printError("Ошибка записи файла: " + err.Error())
-					handled = true
-					continue
-				}
-				fmt.Println("Nexus: Файл успешно записан:", filePath)
-				_ = addToMemory("Записан файл: "+filePath+"\n"+content, "knowledge")
-				handled = true
-				continue
-			}
-
-			if strings.HasPrefix(userInput, "!поиск") {
-				searchQuery = strings.TrimPrefix(userInput, "!поиск")
-				searchQuery = strings.TrimSpace(searchQuery)
-			} else if strings.HasPrefix(userInput, "найди") {
-				searchQuery = strings.TrimPrefix(userInput, "найди")
-				searchQuery = strings.TrimSpace(searchQuery)
-			} else {
-				keywords := []string{
-					"погода", "температура",
-					"курс", "доллар", "евро", "юань", "рубль", "биткоин",
-					"валюта", "американская", "европейская", "китайская",
-					"сколько стоит", "цена", "котировка",
-					"новости", "в интернете",
-				}
-				for _, kw := range keywords {
-					if strings.Contains(lower, kw) {
-						searchQuery = userInput
-						break
-					}
-				}
-			}
-
-			if searchQuery != "" {
-				if strings.HasPrefix(userInput, "!поиск") || strings.HasPrefix(userInput, "найди") {
-					searchQuery = strings.TrimSpace(searchQuery)
-					if searchQuery == "" {
-						fmt.Println("Nexus: Введите, что искать.")
-						handled = true
-						continue
-					}
-				}
-				if !handled && searchQuery != "" {
-					printSystem("Nexus ищет в интернете...\n")
-					result, err := webSearch(searchQuery)
-					if err != nil {
-						printError("Ошибка поиска: " + err.Error())
-						handled = true
-						continue
-					}
-					printSystem("Готово!")
-
-					number := extractNumber(result)
-					contextMsg := "Ты получил результаты поиска по запросу. Используй только эту информацию для ответа. Если точных данных нет, скажи, что не знаешь. Не выдумывай цифры. Отвечай только на русском.\n\nРезультаты поиска:\n" + result
-					if number != "" {
-						contextMsg += "\n\nВ тексте найдено число (возможно, курс): " + number + ". Используй его, если оно соответствует вопросу."
-					}
-					requestMessages := buildRequestMessages(messages, contextMsg, userInput)
-					fullResponse, err := streamChatCompletion(url, buildChatPayload(requestMessages))
-					if err != nil {
-						printError("Ошибка отправки запроса: " + err.Error())
-						handled = true
-						continue
-					}
-					recordTurn(&messages, userInput, fullResponse)
-					_ = addToMemory("Пользователь: "+userInput, "dialog")
-					_ = addToMemory("Nexus: "+fullResponse, "dialog")
-					handled = true
-					continue
-				}
-			}
-
-			if handled {
-				continue
-			}
-
 			var ragContext string
 			memories, err := searchMemory(userInput, maxRAGResults)
 			if err == nil && len(memories) > 0 {
-				ragContext = "Контекст из памяти (используй только если релевантно):\n"
+				ragContext = "Контекст из памяти:\n"
 				for i, mem := range memories {
 					ragContext += fmt.Sprintf("%d. %s\n", i+1, mem)
 				}
 			}
 
+			messages = append(messages, map[string]string{"role": "user", "content": userInput})
 			requestMessages := buildRequestMessages(messages, ragContext, userInput)
 
-			start := time.Now()
-			fullResponse, err := streamChatCompletion(url, buildChatPayload(requestMessages))
-			elapsed := time.Since(start)
+			for {
+				start := time.Now()
+				fullResponse, err := streamChatCompletion(url, buildChatPayload(requestMessages))
+				elapsed := time.Since(start)
 
-			tokens := len([]rune(fullResponse)) / 4
-			if elapsed.Seconds() > 0 {
-				speed := float64(tokens) / elapsed.Seconds()
-				printSystem(fmt.Sprintf("Скорость: %.1f ток/с (%.1f сек, ~%d токенов)", speed, elapsed.Seconds(), tokens))
+				if err != nil {
+					printError("Ошибка отправки запроса: " + err.Error())
+					break
+				}
+
+				tokens := len([]rune(fullResponse)) / 4
+				if elapsed.Seconds() > 0 {
+					speed := float64(tokens) / elapsed.Seconds()
+					printSystem(fmt.Sprintf("Скорость: %.1f ток/с (%.1f сек, ~%d токенов)", speed, elapsed.Seconds(), tokens))
+				}
+
+				toolName, toolResult := executeTool(fullResponse)
+
+				if toolName != "" {
+					printSystem(fmt.Sprintf("Агент вызвал инструмент [%s]", toolName))
+					messages = append(messages, map[string]string{"role": "assistant", "content": fullResponse})
+					messages = append(messages, map[string]string{"role": "system", "content": toolResult})
+					requestMessages = buildRequestMessages(messages, "", userInput)
+					continue
+				}
+
+				fmt.Println("Nexus:", fullResponse)
+				recordTurn(&messages, userInput, fullResponse)
+				_ = addToMemory("Пользователь: "+userInput, "dialog")
+				_ = addToMemory("Nexus: "+fullResponse, "dialog")
+				break
 			}
-
-			recordTurn(&messages, userInput, fullResponse)
-			_ = addToMemory("Пользователь: "+userInput, "dialog")
-			_ = addToMemory("Nexus: "+fullResponse, "dialog")
 		}
 		if err := scanner.Err(); err != nil {
 			printError("Ошибка чтения ввода: " + err.Error())
 		}
 	} else {
-		// РЕЖИМ PROD
 		select {}
 	}
 
