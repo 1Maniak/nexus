@@ -4,7 +4,8 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-BSL_1.1-orange?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v1.7.0-ff00cc?style=for-the-badge)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.8.0-ff00cc?style=for-the-badge&logo=github)](https://github.com/1Maniak/nexus/releases/tag/v1.8.0)
+[![Website](https://img.shields.io/badge/Website-nexus--ai-blue?style=for-the-badge&logo=google-chrome&logoColor=white)](https://1maniak.github.io/nexus/)
 
 **Локальный AI-агент с долговременной памятью, RAG-поиском и веб-интерфейсом.**
 **Работает полностью офлайн, без облачных зависимостей.**
@@ -33,6 +34,40 @@
 
 ---
 
+## 🛠 Стек технологий
+
+<div align="center">
+
+![Go](https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-000000?style=flat-square&logo=ollama&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+
+</div>
+
+---
+
+## 🏗 Архитектура
+
+```mermaid
+flowchart TD
+    U([Пользователь]) --> WEB[Веб-интерфейс :8081]
+    WEB --> RAG[Поиск в памяти RAG]
+    WEB --> TOOLS[Агентные инструменты]
+    
+    RAG --> DB[(SQLite)]
+    RAG --> OLLAMA[Ollama Эмбеддинги]
+    
+    TOOLS --> DDG[DuckDuckGo]
+    TOOLS --> OS[Файловая система]
+    
+    WEB --> LLM[llama.cpp / Qwen 2.5 3B]
+    LLM --> WEB
+```
+
+---
+
 ## 🚀 Установка и запуск
 
 ### 📥 Вариант 1: Для обычных пользователей (Готовый релиз)
@@ -40,7 +75,7 @@
 Если вы просто хотите пользоваться Nexus, вам **не нужно** ничего компилировать. 
 
 1. Перейдите в раздел **[Releases](https://github.com/1Maniak/nexus/releases)**.
-2. Скачайте последний ZIP-архив (например, `Nexus-v1.7.0-Windows.zip`).
+2. Скачайте последний ZIP-архив (например, `Nexus-v1.8.0-Windows.zip`).
 3. Распакуйте архив в любую папку.
 4. Внутри архива следуйте подробной инструкции из файла `README.txt` (там расписано, как установить Ollama, скачать модель и запустить программу).
 
@@ -80,40 +115,6 @@ ollama pull nomic-embed-text
 
 **5. Запустите:**
 Запустите `nexus-dev.exe` (рекомендуется для первого раза, чтобы видеть логи) или `nexus.exe`. Программа сама поднимет сервер и откроет браузер на `http://localhost:8081`.
-
----
-
-## 🛠 Стек технологий
-
-<div align="center">
-
-![Go](https://img.shields.io/badge/Go-00ADD8?style=flat-square&logo=go&logoColor=white)
-![Ollama](https://img.shields.io/badge/Ollama-000000?style=flat-square&logo=ollama&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
-
-</div>
-
----
-
-## 🏗 Архитектура
-
-```mermaid
-flowchart TD
-    U([Пользователь]) --> WEB[Веб-интерфейс :8081]
-    WEB --> RAG[Поиск в памяти RAG]
-    WEB --> TOOLS[Агентные инструменты]
-    
-    RAG --> DB[(SQLite)]
-    RAG --> OLLAMA[Ollama Эмбеддинги]
-    
-    TOOLS --> DDG[DuckDuckGo]
-    TOOLS --> OS[Файловая система]
-    
-    WEB --> LLM[llama.cpp / Qwen 2.5 3B]
-    LLM --> WEB
-```
 
 ---
 
@@ -171,7 +172,7 @@ Nexus is a local AI agent designed for autonomous operation without cloud depend
 If you just want to use Nexus, you **don't need** to compile anything.
 
 1. Go to the **[Releases](https://github.com/1Maniak/nexus/releases)** page.
-2. Download the latest ZIP archive (e.g., `Nexus-v1.7.0-Windows.zip`).
+2. Download the latest ZIP archive (e.g., `Nexus-v1.8.0-Windows.zip`).
 3. Extract the archive to any folder.
 4. Inside the archive, follow the instructions in the `README.txt` file (it explains how to install Ollama, download the model, and run the program).
 
@@ -243,7 +244,9 @@ Business Source License 1.1 (BSL 1.1). See [LICENSE](LICENSE) for details.
 ### Contacts
 
 - GitHub: https://github.com/1Maniak
-- Telegram: https://t.me/Makson4ikxD
+- Telegram: https://t.me/fullstack_life
+- VK: https://vk.com/nexus_fullstack_life
+- Boosty: https://boosty.to/1maniak
 
 </details>
 
