@@ -17,6 +17,7 @@ import (
 
 var (
 	keepAliveMu   sync.Mutex
+	activeClients int
 	shutdownTimer *time.Timer
 )
 
@@ -157,6 +158,7 @@ func startWebServer() {
 		}
 
 		keepAliveMu.Lock()
+		activeClients++
 		if shutdownTimer != nil {
 			shutdownTimer.Stop()
 			shutdownTimer = nil
@@ -173,11 +175,19 @@ func startWebServer() {
 			select {
 			case <-r.Context().Done():
 				keepAliveMu.Lock()
-				shutdownTimer = time.AfterFunc(3*time.Second, func() {
-					printSystem("Соединение с браузером потеряно. Выключаю Nexus...")
-					cleanupProcesses()
-					os.Exit(0)
-				})
+				activeClients--
+				if activeClients <= 0 {
+					shutdownTimer = time.AfterFunc(3*time.Second, func() {
+						keepAliveMu.Lock()
+						isLast := activeClients <= 0
+						keepAliveMu.Unlock()
+						if isLast {
+							printSystem("Все окна закрыты. Выключаю Nexus...")
+							cleanupProcesses()
+							os.Exit(0)
+						}
+					})
+				}
 				keepAliveMu.Unlock()
 				return
 			case <-ticker.C:
@@ -282,11 +292,7 @@ func handleChatStream(ctx context.Context, w http.ResponseWriter, flusher http.F
 	toolName, toolResult := executeTool(firstResponse)
 
 	if toolName != "" {
-		fmt.Fprintf(w, "data: [LOG] Использую инструмент: %s\n\n", toolName)
-		flusher.Flush()
-
-		fmt.Fprintf(w, "data: \n\n")
-		flusher.Flush()
+		printSystem("Агент использует инструмент: " + toolName)
 
 		messages = append(messages, map[string]string{"role": "assistant", "content": firstResponse})
 		messages = append(messages, map[string]string{"role": "system", "content": toolResult})
