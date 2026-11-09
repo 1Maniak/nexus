@@ -47,7 +47,7 @@ jobs:
       - name: Send to Telegram
         if: ${{ !contains(github.ref_name, 'test') }}
         run: |
-          MESSAGE=$(printf "🚀 Вышел новый релиз Nexus %s!\n\n📦 Что нового и ссылки на скачивание читайте на нашем сайте:\nhttps://1maniak.github.io/nexus/\n\n👤 Автор: https://github.com/${{ github.actor }}\n💻 Репозиторий: https://github.com/${{ github.repository }}" "${{ github.ref_name }}")
+          MESSAGE=$(printf "🚀 Вышел новый релиз Nexus %s!\n\n📦 Полный список изменений, новые фичи и ссылки на скачивание уже на официальном сайте:\nhttps://1maniak.github.io/nexus/\n\n👤 Автор: https://github.com/${{ github.actor }}\n💻 Исходный код: https://github.com/${{ github.repository }}" "${{ github.ref_name }}")
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
@@ -56,7 +56,7 @@ jobs:
       - name: Send to VK wall
         if: ${{ !contains(github.ref_name, 'test') }}
         run: |
-          MESSAGE=$(printf "🚀 Вышел новый релиз Nexus %s!\n\n📦 Что нового и ссылки на скачивание читайте на нашем сайте:\nhttps://1maniak.github.io/nexus/\n\n👤 Автор: https://github.com/${{ github.actor }}\n💻 Репозиторий: https://github.com/${{ github.repository }}" "${{ github.ref_name }}")
+          MESSAGE=$(printf "🚀 Вышел новый релиз Nexus %s!\n\n📦 Полный список изменений, новые фичи и ссылки на скачивание уже на официальном сайте:\nhttps://1maniak.github.io/nexus/\n\n👤 Автор: https://github.com/${{ github.actor }}\n💻 Исходный код: https://github.com/${{ github.repository }}" "${{ github.ref_name }}")
           curl -s -X POST "https://api.vk.com/method/wall.post" \
             -d access_token="${{ secrets.VK_ACCESS_TOKEN }}" \
             -d owner_id="${{ secrets.VK_GROUP_ID }}" \

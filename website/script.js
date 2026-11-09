@@ -1,31 +1,32 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const container = document.getElementById('changelog-container');
     
+    if (!container) return;
+    
     try {
         const response = await fetch('https://raw.githubusercontent.com/1Maniak/nexus/main/docs/CHANGELOG.md');
         const text = await response.text();
         
-        // Отрезаем блок [Unreleased], берем только первую версию
-        const parts = text.split('## [');
-        let latestVersion = parts[1];
+        const versionRegex = /## \[v[0-9]/g;
+        const matches = [...text.matchAll(versionRegex)];
         
-        if (latestVersion) {
-            // Возвращаем префикс "## [" для корректного парсинга
-            latestVersion = '## [' + latestVersion;
-            
-            // Обрезаем до следующей версии
-            const nextVersionIndex = latestVersion.indexOf('## [', 2);
-            if (nextVersionIndex !== -1) {
-                latestVersion = latestVersion.substring(0, nextVersionIndex);
+        if (matches.length > 0) {
+            let endIndex;
+            if (matches.length >= 3) {
+                endIndex = matches[2].index;
+            } else {
+                endIndex = text.length;
             }
             
-            // Парсим Markdown в HTML
-            container.innerHTML = marked.parse(latestVersion);
+            const startIndex = matches[0].index;
+            const latestVersions = text.substring(startIndex, endIndex);
+            
+            container.innerHTML = marked.parse(latestVersions);
         } else {
             container.innerHTML = '<p>История изменений пуста.</p>';
         }
     } catch (error) {
         console.error('Ошибка загрузки CHANGELOG:', error);
-        container.innerHTML = '<p>Не удалось загрузить историю изменений. Пожалуйста, посетите <a href="https://github.com/1Maniak/nexus/releases">GitHub Releases</a>.</p>';
+        container.innerHTML = '<p>Не удалось загрузить историю изменений.</p>';
     }
 });
