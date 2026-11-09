@@ -128,6 +128,7 @@
             <div class="about-text">
                 <p>Я писал Nexus на Go с нуля. В основе лежит локальная модель Qwen 2.5 (3B), работающая через llama.cpp. Для долговременной памяти я использую векторную базу данных SQLite с поиском по смыслу (RAG).</p>
                 <p>Главная цель - создать инструмент, который заменит мне десятки мелких программ. Он сам открывает проводник, читает файлы, ищет актуальные новости в DuckDuckGo и отвечает на вопросы, не отправляя ни байта информации на сторонние сервера.</p>
+                <p style="margin-top: 16px; font-size: 14px; color: var(--accent-color);">Проект насчитывает более 4300 строк кода, написанных вручную.</p>
             </div>
         </div>
     </section>
@@ -159,6 +160,60 @@
                     </div>
                     <h3>Стриминг и Скорость</h3>
                     <p>Бэкенд на Go обеспечивает мгновенный отклик. Ответы ИИ появляются на экране плавно, слово за словом, благодаря технологии SSE.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- НОВАЯ СЕКЦИЯ "ПОЧЕМУ NEXUS?" -->
+    <section id="why" class="section">
+        <div class="container">
+            <div class="section-title">
+                <h2>Почему Nexus?</h2>
+                <p>Среди сотен оберток над ChatGPT и облачных ботов, Nexus выделяется архитектурой и подходом.</p>
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <div class="icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </div>
+                    <h3>Полная автономность и приватность</h3>
+                    <p>Nexus работает на вашем железе. Вы не платите за API, ваши данные не уходят в OpenAI. Для многих разработчиков это главный аргумент.</p>
+                </div>
+                <div class="card">
+                    <div class="icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+                    </div>
+                    <h3>Агентность на маленькой модели</h3>
+                    <p>Обычно для Tool Calling нужны модели от 7B и выше. В Nexus реализован рабочий парсер тегов для модели 3B. Это технически интересное и нестандартное решение.</p>
+                </div>
+                <div class="card">
+                    <div class="icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                    </div>
+                    <h3>Бэкенд на Go</h3>
+                    <p>Это не Python-скрипт на 500 строк. Это скомпилированный, быстрый сервер, который сам управляет процессами ОС, работает с SQLite и раздает фронтенд.</p>
+                </div>
+                <div class="card">
+                    <div class="icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+                    </div>
+                    <h3>Кастомный интерфейс</h3>
+                    <p>Не дефолтный чат с Tailwind, а уникальный дизайн с матовым стеклом, стримингом и кастомными логами инструментов.</p>
+                </div>
+                <div class="card">
+                    <div class="icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    </div>
+                    <h3>Философия TFT (Tool For Tool)</h3>
+                    <p>В документации заложена идея, что Nexus - это не конечный продукт, а среда для создания других инструментов. Это добавляет проекту глубины.</p>
+                </div>
+                <div class="card">
+                    <div class="icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </div>
+                    <h3>Автоматизация из коробки</h3>
+                    <p>CI/CD для сайта, автоматические анонсы релизов, сборка в один клик и умное выключение сервера. Всё работает без вашего участия.</p>
                 </div>
             </div>
         </div>

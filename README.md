@@ -18,7 +18,7 @@
 
 **Nexus** - это локальный AI-агент, разработанный для автономной работы. Все данные обрабатываются на устройстве пользователя, ничего не уходит в интернет. Это решение для тех, кто ценит приватность и независимость от зарубежных API.
 
-Агент использует модель **Qwen 2.5 3B** через llama.cpp, хранит диалоги в **SQLite** с векторным поиском и общается с вами через удобный **веб-интерфейс**.
+Агент использует модель **Qwen 2.5 3B** через llama.cpp, хранит диалоги в **SQLite** с векторным поиском и общается с вами через удобный **веб-интерфейс**. Проект насчитывает более **4300 строк** кода, написанных вручную.
 
 ### 🌟 Ключевые возможности
 
@@ -31,6 +31,28 @@
 | 📁 **Файлы** | Открытие файлов/папок в системе, чтение 8+ форматов (PDF, DOCX, CSV, TXT и др.). |
 | 🤖 **Агентность** | Модель сама решает, когда использовать инструменты (открыть файл, найти в интернете, узнать время). |
 | ⚡ **Автоматизация** | Автозапуск сервисов, открытие браузера и умное выключение при закрытии вкладки. |
+
+---
+
+## 🌟 Почему Nexus?
+
+Среди сотен оберток над ChatGPT и облачных ботов, Nexus выделяется архитектурой и подходом:
+
+1. **Полная автономность и приватность**: Nexus работает на вашем железе. Вы не платите за API, ваши данные не уходят в OpenAI. Для многих разработчиков это главный аргумент.
+2. **Агентность на маленькой модели**: Обычно для Tool Calling нужны модели от 7B и выше. В Nexus реализован рабочий парсер тегов для модели 3B. Это технически интересное и нестандартное решение.
+3. **Бэкенд на Go**: Это не Python-скрипт на 500 строк. Это скомпилированный, быстрый сервер, который сам управляет процессами ОС, работает с SQLite и раздает фронтенд.
+4. **Кастомный интерфейс**: Не дефолтный чат с Tailwind, а уникальный дизайн с матовым стеклом, стримингом и кастомными логами инструментов.
+5. **Философия TFT (Tool For Tool)**: В документации заложена идея, что Nexus - это не конечный продукт, а среда для создания других инструментов. Это добавляет проекту глубины.
+
+### ⚙️ Автоматизация из коробки
+
+Проект полностью автоматизирован для удобной разработки и распространения:
+
+* **CI/CD для сайта**: Любой пуш в `main` автоматически собирает и деплоит сайт на GitHub Pages.
+* **Автоматические анонсы**: При создании тега `vX.Y.Z` бот вытаскивает нужную версию из `CHANGELOG.md`, создает релиз на GitHub и рассылает короткие посты в Telegram и ВК со ссылкой на сайт.
+* **Сборка в один клик**: Скрипт `build.bat` сам убивает зависшие процессы и компилирует Dev/Prod версии.
+* **Умное выключение (Keep-Alive)**: Сервер сам считает открытые вкладки и корректно выключается, когда закрыта последняя. При F5 не падает.
+* **Фоновая загрузка**: Браузер открывается моментально, а тяжелая модель (llama-server) грузится в фоне, не блокируя интерфейс.
 
 ---
 
@@ -141,6 +163,7 @@ ollama pull nomic-embed-text
 - [x] **v1.5.0** - Векторный RAG
 - [x] **v1.6.0** - Веб-интерфейс и оптимизация
 - [x] **v1.7.0** - Стриминг, Drag & Drop, Агентные инструменты
+- [x] **v1.8.0** - Кастомный сайт, Boosty, автоматизация
 - [ ] **v2.0.0** - Полноценный Tool Calling (JSON-схемы) и 7B модель
 - [ ] **NetScope** - Диагностика сети
 
@@ -153,7 +176,7 @@ ollama pull nomic-embed-text
 
 ## About
 
-Nexus is a local AI agent designed for autonomous operation without cloud dependencies. All data is processed on your device. The agent uses Qwen 2.5 3B via llama.cpp, stores dialogs in SQLite with vector search, and communicates through a web interface.
+Nexus is a local AI agent designed for autonomous operation without cloud dependencies. All data is processed on your device. The agent uses Qwen 2.5 3B via llama.cpp, stores dialogs in SQLite with vector search, and communicates through a web interface. The project has over 4300 lines of hand-written code.
 
 ## Features
 
@@ -165,6 +188,24 @@ Nexus is a local AI agent designed for autonomous operation without cloud depend
 - **Agentic loop**: model decides when to use tools (open files, search web).
 - **Automation**: auto-launch of services, smart shutdown when tab is closed.
 
+## Why Nexus?
+
+Among hundreds of ChatGPT wrappers and cloud bots, Nexus stands out:
+
+1. **Full autonomy and privacy**: Runs on your hardware. No API fees, no data leaks.
+2. **Agentic loop on a small model**: Tool calling implemented for a 3B model.
+3. **Go backend**: Compiled, fast server that manages OS processes and SQLite.
+4. **Custom UI**: Unique glassmorphism design with streaming and tool logs.
+5. **TFT philosophy**: Nexus is a tool for building other tools.
+
+### Automation
+
+- **CI/CD for website**: Push to `main` auto-deploys site to GitHub Pages.
+- **Auto-announcements**: Tag `vX.Y.Z` triggers release creation and social media posts.
+- **One-click build**: `build.bat` kills old processes and compiles dev/prod.
+- **Smart shutdown**: Keep-Alive counts tabs and shuts down only when all closed.
+- **Background loading**: Browser opens instantly, model loads in background.
+
 ## 🚀 Installation & Launch
 
 ### 📥 Option 1: For Regular Users (Ready Release)
@@ -174,13 +215,11 @@ If you just want to use Nexus, you **don't need** to compile anything.
 1. Go to the **[Releases](https://github.com/1Maniak/nexus/releases)** page.
 2. Download the latest ZIP archive (e.g., `Nexus-v1.8.0-Windows.zip`).
 3. Extract the archive to any folder.
-4. Inside the archive, follow the instructions in the `README.txt` file (it explains how to install Ollama, download the model, and run the program).
+4. Inside the archive, follow the instructions in the `README.txt` file.
 
 ---
 
 ### 🛠 Option 2: For Developers (Build from Source)
-
-If you want to modify the code, add your features, or just build the project yourself:
 
 **Requirements:**
 - **Go 1.23+** - [Download](https://go.dev/dl/)
@@ -203,19 +242,19 @@ ollama pull nomic-embed-text
 Create a `llama.cpp` folder in the project root. Place `llama-server.exe` (and all DLL files) and a `models` folder with `qwen2.5-3b-instruct-q4_k_m.gguf` inside.
 
 **4. Build the project (using build.bat):**
-Simply run the `build.bat` script in the project root (double-click or via terminal). 
-The script will automatically stop old running processes (if any), compile `nexus-dev.exe` (with console logs), and `nexus.exe` (silent release version).
+Simply run the `build.bat` script in the project root.
+The script will automatically stop old running processes, compile `nexus-dev.exe` and `nexus.exe`.
 
 *Manual build:*
 - For debug: `go build -o nexus-dev.exe .`
 - For release: `go build -ldflags="-H windowsgui" -o nexus.exe .`
 
 **5. Run:**
-Run `nexus-dev.exe` (recommended for the first time to see logs) or `nexus.exe`. The program will start services and open the browser at `http://localhost:8081`.
+Run `nexus-dev.exe` or `nexus.exe`. The program will start services and open the browser at `http://localhost:8081`.
 
 ## Usage
 
-Thanks to the agentic loop, Nexus understands context and calls the necessary tools automatically. You don't need to write complex commands, just chat with it like a normal assistant.
+Thanks to the agentic loop, Nexus understands context and calls the necessary tools automatically.
 
 | Example Request | Nexus Action |
 |---------|----------|
@@ -226,14 +265,13 @@ Thanks to the agentic loop, Nexus understands context and calls the necessary to
 | `Search web for USD rate` | Uses `[TOOL: search]` via DuckDuckGo. |
 | `exit` | Quits the console (in dev mode). |
 
-*Note: 3B models sometimes struggle with long paths containing Cyrillic characters. For better agent performance, a 7B or larger model is recommended.*
-
 ## Roadmap
 
 - [x] **v1.0.0** - First working version
 - [x] **v1.5.0** - Vector RAG
 - [x] **v1.6.0** - Web interface and optimization
 - [x] **v1.7.0** - Streaming, Drag & Drop, Agentic tools
+- [x] **v1.8.0** - Custom website, Boosty, automation
 - [ ] **v2.0.0** - Full Tool Calling (JSON schemas) and 7B model
 - [ ] **NetScope** - Network diagnostics
 
