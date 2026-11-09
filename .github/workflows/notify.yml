@@ -1,4 +1,4 @@
-name: Notify about new release
+name: Release and Notify
 
 on:
   push:
@@ -8,54 +8,59 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Extract and Format Changelog
         run: |
-          # 1. Находим блок с нашим тегом
           awk -v tag="## [${{ github.ref_name }}]" 'index($0, tag) == 1 { p=1; next } p && /^## \[v/ { exit } p' docs/CHANGELOG.md > raw.txt
-          
-          # 2. Убираем обратные кавычки, звездочки и линии ---
           sed -i 's/`//g; s/\*\*//g; /^---$/d' raw.txt
-          
-          # 3. Красиво оформляем заголовки (добавляем перенос строки перед)
           sed -i 's/### Добавлено/\n📦 ДОБАВЛЕНО:/g' raw.txt
           sed -i 's/### Изменено/\n🔄 ИЗМЕНЕНО:/g' raw.txt
           sed -i 's/### Исправлено/\n🛠 ИСПРАВЛЕНО:/g' raw.txt
           sed -i 's/### Оптимизировано/\n⚡ ОПТИМИЗИРОВАНО:/g' raw.txt
-          
-          # 4. Удаляем пустые строки в начале и в конце файла
           sed -i '/./,$!d' raw.txt
           sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' raw.txt
-          
-          # 5. Сжимаем множественные пустые строки в одну
           cat -s raw.txt > final_changelog.txt
-          
-          # 6. Обрезаем до 3000 символов (защита от лимитов API)
           head -c 3000 final_changelog.txt > latest_changelog.txt
-          
-          # 7. Экранируем HTML-теги для Telegram
           sed 's/</\&lt;/g; s/>/\&gt;/g' latest_changelog.txt > latest_changelog_tg.txt
 
           echo "--- ТЕКСТ ДЛЯ МЕССЕНДЖЕРОВ ---"
           cat latest_changelog.txt
-          echo "------------------------------"
+          
+          echo "CHANGELOG_BODY<<EOF" >> $GITHUB_ENV
+          cat latest_changelog.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ env.CHANGELOG_BODY }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send to Telegram
+        if: ${{ !contains(github.ref_name, 'test') }}
         run: |
           CHANGELOG=$(cat latest_changelog_tg.txt)
-          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n👤 Author: <a href=\"https://github.com/${{ github.actor }}\">${{ github.actor }}</a>\n🔗 Repo: <a href=\"https://github.com/${{ github.repository }}\">${{ github.repository }}</a>" "${{ github.ref_name }}" "$CHANGELOG")
+          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n📥 Скачать: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}\n\n👤 Author: <a href=\"https://github.com/${{ github.actor }}\">${{ github.actor }}</a>" "${{ github.ref_name }}" "$CHANGELOG")
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
             --data-urlencode "text=$MESSAGE"
 
       - name: Send to VK wall
+        if: ${{ !contains(github.ref_name, 'test') }}
         run: |
           CHANGELOG=$(cat latest_changelog.txt)
-          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n👤 Author: https://github.com/${{ github.actor }}\n🔗 Repo: https://github.com/${{ github.repository }}" "${{ github.ref_name }}" "$CHANGELOG")
+          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n📥 Скачать: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}\n\n👤 Author: https://github.com/${{ github.actor }}" "${{ github.ref_name }}" "$CHANGELOG")
           curl -s -X POST "https://api.vk.com/method/wall.post" \
             -d access_token="${{ secrets.VK_ACCESS_TOKEN }}" \
             -d owner_id="${{ secrets.VK_GROUP_ID }}" \
