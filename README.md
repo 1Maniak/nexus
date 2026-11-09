@@ -4,7 +4,7 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-BSL_1.1-orange?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v1.8.0-ff00cc?style=for-the-badge&logo=github)](https://github.com/1Maniak/nexus/releases/tag/v1.8.0)
+[![Version](https://img.shields.io/badge/version-v1.7.0-ff00cc?style=for-the-badge)](docs/CHANGELOG.md)
 
 **Локальный AI-агент с долговременной памятью, RAG-поиском и веб-интерфейсом.**
 **Работает полностью офлайн, без облачных зависимостей.**

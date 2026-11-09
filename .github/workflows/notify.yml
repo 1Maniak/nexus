@@ -15,6 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Extract and Format Changelog
+        id: changelog
         run: |
           awk -v tag="## [${{ github.ref_name }}]" 'index($0, tag) == 1 { p=1; next } p && /^## \[v/ { exit } p' docs/CHANGELOG.md > raw.txt
           sed -i 's/`//g; s/\*\*//g; /^---$/d' raw.txt
@@ -30,27 +31,13 @@ jobs:
 
           echo "--- ТЕКСТ ДЛЯ МЕССЕНДЖЕРОВ ---"
           cat latest_changelog.txt
-          
-          echo "CHANGELOG_BODY<<EOF" >> $GITHUB_ENV
-          cat latest_changelog.txt >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: ${{ env.CHANGELOG_BODY }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "------------------------------"
 
       - name: Send to Telegram
         if: ${{ !contains(github.ref_name, 'test') }}
         run: |
           CHANGELOG=$(cat latest_changelog_tg.txt)
-          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n📦 Релиз на GitHub: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}?t=${{ github.run_id }}\n\n👤 Author: <a href=\"https://github.com/${{ github.actor }}\">${{ github.actor }}</a>" "${{ github.ref_name }}" "$CHANGELOG")
+          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n👤 Author: <a href=\"https://github.com/${{ github.actor }}\">${{ github.actor }}</a>\n🔗 Repo: <a href=\"https://github.com/${{ github.repository }}\">${{ github.repository }}</a>" "${{ github.ref_name }}" "$CHANGELOG")
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
@@ -60,7 +47,7 @@ jobs:
         if: ${{ !contains(github.ref_name, 'test') }}
         run: |
           CHANGELOG=$(cat latest_changelog.txt)
-          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n📦 Релиз на GitHub: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}?t=${{ github.run_id }}\n\n👤 Author: https://github.com/${{ github.actor }}" "${{ github.ref_name }}" "$CHANGELOG")
+          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n👤 Author: https://github.com/${{ github.actor }}\n🔗 Repo: https://github.com/${{ github.repository }}" "${{ github.ref_name }}" "$CHANGELOG")
           curl -s -X POST "https://api.vk.com/method/wall.post" \
             -d access_token="${{ secrets.VK_ACCESS_TOKEN }}" \
             -d owner_id="${{ secrets.VK_GROUP_ID }}" \
