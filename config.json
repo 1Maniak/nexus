@@ -1,0 +1,4 @@
+{
+  "llama_server_path": "../llama.cpp/llama-server.exe",
+  "llama_model_path": "../llama.cpp/models/qwen2.5-3b-instruct-q4_k_m.gguf"
+}
