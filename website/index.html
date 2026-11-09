@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus AI — Локальный ИИ-агент</title>
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/1Maniak/nexus/main/web/photo/logo-nexus.png">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="background-glow"></div>
+
+    <nav>
+        <div class="logo">
+            <img src="https://raw.githubusercontent.com/1Maniak/nexus/main/web/photo/logo-nexus.png" alt="Nexus Logo">
+            <span>Nexus AI</span>
+        </div>
+        <div class="links">
+            <a href="#features">Возможности</a>
+            <a href="#changelog">Обновления</a>
+            <a href="https://github.com/1Maniak/nexus" target="_blank" class="btn-github">GitHub</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <h1>Nexus AI</h1>
+        <p>Локальный AI-агент с долговременной памятью, RAG-поиском и веб-интерфейсом. Работает полностью офлайн.</p>
+        <div class="hero-buttons">
+            <a href="https://github.com/1Maniak/nexus/releases" class="btn primary">Скачать последний релиз</a>
+            <a href="https://github.com/1Maniak/nexus" class="btn secondary">Исходный код</a>
+        </div>
+    </header>
+
+    <section id="features" class="features">
+        <h2>Ключевые возможности</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>🤖 Агентный цикл</h3>
+                <p>Nexus сам решает, когда использовать инструменты: открыть файл, найти в интернете или узнать время.</p>
+            </div>
+            <div class="card">
+                <h3>🧠 Локальная память</h3>
+                <p>Векторная база данных SQLite и RAG-поиск. ИИ помнит ваши диалоги и файлы из базы знаний.</p>
+            </div>
+            <div class="card">
+                <h3>💬 Красивый UI</h3>
+                <p>Современный веб-интерфейс с эффектом матового стекла, стримингом ответов и темной темой.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="changelog" class="changelog-section">
+        <h2>Последние обновления</h2>
+        <div id="changelog-container" class="glass-panel">
+            <p>Загрузка изменений...</p>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2026 Nexus AI. Лицензия BSL 1.1.</p>
+        <div class="socials">
+            <a href="https://github.com/1Maniak" target="_blank">GitHub</a>
+            <a href="https://t.me/Makson4ikxD" target="_blank">Telegram</a>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
