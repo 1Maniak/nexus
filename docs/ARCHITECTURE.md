@@ -5,9 +5,36 @@
 
 ---
 
+## [v1.8.0] — 2026-11-09
+
+### Схема агентной обработки запроса (Tool Calling)
+
+```mermaid
+flowchart TD
+    U([Пользователь]) --> WEB[Веб-интерфейс :8081]
+    WEB --> RAG[Поиск в памяти RAG]
+    WEB --> PROMPT[Формирование промпта]
+    
+    PROMPT --> LLM[llama.cpp / Qwen 2.5 3B]
+    LLM --> PARSER{Парсер тегов}
+    
+    PARSER -- Обычный текст --> WEB
+    PARSER -- "[TOOL: ...]" --> TOOLS[Исполнитель инструментов]
+    
+    TOOLS --> OS[Файловая система]
+    TOOLS --> DDG[DuckDuckGo]
+    TOOLS --> TIME[Системное время]
+    
+    OS --> LLM
+    DDG --> LLM
+    TIME --> LLM
+```
+
+---
+
 ## [v1.6.0] — 2026-11-07
 
-### Схема обработки запроса
+### Схема обработки запроса (Без агентов)
 
 ```mermaid
 flowchart TD
@@ -31,8 +58,8 @@ graph LR
     subgraph Ядро_Nexus
         WEB[web.go<br/>HTTP Server]
         MAIN[main.go<br/>Core Logic]
+        TOOLS[tools.go<br/>Tool Execution]
         LAUNCH[launcher.go<br/>Auto-start Services]
-        CLEAN[cleanup.go<br/>Process Cleanup]
     end
 
     subgraph Внешние_сервисы
@@ -47,13 +74,13 @@ graph LR
     end
 
     WEB --> MAIN
+    MAIN --> TOOLS
     LAUNCH --> QWEN
     LAUNCH --> OLLAMA
     MAIN --> DDG
     MAIN --> OLLAMA
     MAIN --> DB
-    BASE --> DB
-    CLEAN -.-> QWEN
+    TOOLS --> DDG
 ```
 
 ---
@@ -67,25 +94,11 @@ flowchart TD
     U([Пользователь]) --> IN[Ввод текста]
     IN --> EXIT{exit?}
     EXIT -- Да --> END([Выход])
-    EXIT -- Нет --> TIME{Запрос времени?}
-    TIME -- Да --> RT[getCurrentTime] --> SAVE
-    TIME -- Нет --> FILE{Команды файлов?}
-    FILE -- Да --> FOP[os.ReadFile / WriteFile] --> SAVE
-    FILE -- Нет --> SEARCH{Интернет-поиск?}
-    SEARCH -- Да --> WS[webSearch DuckDuckGo] --> LLM
-    SEARCH -- Нет --> RAG[searchMemory → searchByVector]
+    EXIT -- Нет --> RAG[searchMemory → searchByVector]
     RAG --> LLM[streamChatCompletion]
     LLM --> SAVE[addToMemory]
     SAVE --> U
 ```
-
----
-
-## [v1.5.0] — 2026-08-12
-
-### Ключевое изменение: векторный RAG
-
-Переход от FTS5 (поиск по словам) к косинусному сходству (поиск по смыслу).
 
 ---
 
