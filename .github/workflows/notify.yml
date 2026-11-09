@@ -50,7 +50,7 @@ jobs:
         if: ${{ !contains(github.ref_name, 'test') }}
         run: |
           CHANGELOG=$(cat latest_changelog_tg.txt)
-          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n📥 Скачать: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}\n\n👤 Author: <a href=\"https://github.com/${{ github.actor }}\">${{ github.actor }}</a>" "${{ github.ref_name }}" "$CHANGELOG")
+          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n📦 Релиз на GitHub: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}\n\n👤 Author: <a href=\"https://github.com/${{ github.actor }}\">${{ github.actor }}</a>" "${{ github.ref_name }}" "$CHANGELOG")
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
@@ -60,7 +60,7 @@ jobs:
         if: ${{ !contains(github.ref_name, 'test') }}
         run: |
           CHANGELOG=$(cat latest_changelog.txt)
-          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n📥 Скачать: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}\n\n👤 Author: https://github.com/${{ github.actor }}" "${{ github.ref_name }}" "$CHANGELOG")
+          MESSAGE=$(printf "🚀 Новый релиз Nexus!\n\n🏷 Тег: %s\n\n%s\n\n📦 Релиз на GitHub: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}\n\n👤 Author: https://github.com/${{ github.actor }}" "${{ github.ref_name }}" "$CHANGELOG")
           curl -s -X POST "https://api.vk.com/method/wall.post" \
             -d access_token="${{ secrets.VK_ACCESS_TOKEN }}" \
             -d owner_id="${{ secrets.VK_GROUP_ID }}" \
