@@ -29,3 +29,5 @@ run_llama.bat
 .DS_Store
 Thumbs.db
 desktop.ini
+
+RELEASE_TEMPLATE.md
